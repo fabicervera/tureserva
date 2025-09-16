@@ -561,6 +561,10 @@ class TurnosProAPITester:
         print("🚀 Starting TurnosPro API Tests...")
         print("=" * 50)
         
+        # Location tests (NEW)
+        print("\n🌍 Testing Location System...")
+        self.test_get_locations()
+        
         # Authentication tests
         print("\n📝 Testing Authentication...")
         if not self.test_employer_registration():
@@ -577,16 +581,29 @@ class TurnosProAPITester:
         
         # Calendar tests
         print("\n📅 Testing Calendar Management...")
-        self.test_create_calendar()
+        self.test_create_calendar_with_free_subscription()  # NEW: Tests free subscription
         self.test_get_calendars_employer()
         self.test_get_calendars_client()
+        self.test_calendars_filter_by_location()  # NEW
         self.test_get_calendar_by_slug()
-        self.test_update_calendar_settings()
+        
+        # Calendar settings tests (NEW FEATURES)
+        print("\n⚙️ Testing Calendar Settings...")
+        self.test_update_calendar_settings_partial_hours()  # NEW
+        self.test_update_calendar_settings_specific_dates()  # NEW
+        self.test_blocked_dates_validation()  # NEW
         self.test_get_calendar_settings()
+        self.test_get_available_slots()  # NEW: Tests priority logic
+        
+        # Friendship system tests (NEW)
+        print("\n👥 Testing Friendship System...")
+        self.test_request_friendship()  # NEW
+        self.test_get_friendship_requests()  # NEW
+        self.test_respond_to_friendship()  # NEW
         
         # Appointment tests
         print("\n🕐 Testing Appointments...")
-        self.test_create_appointment()
+        self.test_create_appointment_requires_friendship()  # NEW: Tests friendship requirement
         self.test_get_appointments_employer()
         self.test_get_appointments_client()
         
@@ -606,6 +623,8 @@ class TurnosProAPITester:
             print("\n❌ Failed Tests:")
             for error in self.errors:
                 print(f"  - {error}")
+        else:
+            print("\n✅ All tests passed!")
         
         return self.tests_passed == self.tests_run
 
