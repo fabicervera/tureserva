@@ -421,6 +421,10 @@ async def get_calendar_settings(calendar_id: str):
         # Return default settings
         default_settings = CalendarSettings(calendar_id=calendar_id)
         return default_settings.dict()
+    
+    # Remove MongoDB ObjectId and return clean data
+    if '_id' in settings:
+        del settings['_id']
     return settings
 
 # Friendship system
