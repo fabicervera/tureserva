@@ -639,7 +639,7 @@ const Dashboard = () => {
                     <Label htmlFor="province">Provincia</Label>
                     <Select value={selectedProvince} onValueChange={(value) => {
                       setSelectedProvince(value);
-                      setSelectedCity('');
+                      setSelectedCity('all');
                     }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Tu provincia" />
