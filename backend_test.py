@@ -485,6 +485,8 @@ class TurnosProAPITester:
         success, status, response = self.make_request('POST', f'calendars/{self.calendar_id}/appointments', appointment_data, token=self.client_token, expected_status=200)
         
         if success:
+            # Store appointment ID for deletion test
+            self.appointment_id = response.get('id')
             self.log_test("Create Appointment Requires Friendship", True)
             return True
         else:
@@ -495,6 +497,117 @@ class TurnosProAPITester:
             else:
                 self.log_test("Create Appointment Requires Friendship", False, f"Status: {status}, Response: {response}")
                 return False
+
+    def test_get_my_appointments(self):
+        """Test GET /api/appointments/my-appointments - NEW FEATURE"""
+        if not self.client_token:
+            self.log_test("Get My Appointments", False, "No client token available")
+            return False
+            
+        success, status, response = self.make_request('GET', 'appointments/my-appointments', token=self.client_token, expected_status=200)
+        
+        if success and isinstance(response, list):
+            # Check if appointments have calendar_info enrichment
+            if len(response) > 0:
+                first_appointment = response[0]
+                if 'calendar_info' in first_appointment:
+                    self.log_test("Get My Appointments", True, "Appointments enriched with calendar info")
+                else:
+                    self.log_test("Get My Appointments", True, "Basic appointments list returned")
+            else:
+                self.log_test("Get My Appointments", True, "Empty appointments list returned")
+            return True
+        else:
+            self.log_test("Get My Appointments", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_delete_appointment(self):
+        """Test DELETE /api/appointments/{id} - NEW FEATURE"""
+        if not self.appointment_id or not self.client_token:
+            self.log_test("Delete Appointment", False, "Missing appointment ID or client token")
+            return False
+            
+        success, status, response = self.make_request('DELETE', f'appointments/{self.appointment_id}', token=self.client_token, expected_status=200)
+        
+        if success:
+            self.log_test("Delete Appointment", True)
+            return True
+        else:
+            self.log_test("Delete Appointment", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_get_available_dates(self):
+        """Test GET /api/calendars/{id}/available-dates - NEW FEATURE"""
+        if not self.calendar_id:
+            self.log_test("Get Available Dates", False, "No calendar ID available")
+            return False
+            
+        # Test with current month
+        current_date = datetime.now()
+        month = current_date.month
+        year = current_date.year
+        
+        success, status, response = self.make_request('GET', f'calendars/{self.calendar_id}/available-dates?month={month}&year={year}', expected_status=200)
+        
+        if success and isinstance(response, dict):
+            # Check if response has expected structure
+            expected_keys = ['available_dates', 'blocked_dates', 'no_slots_dates']
+            if all(key in response for key in expected_keys):
+                self.log_test("Get Available Dates", True, "Response has correct structure")
+                return True
+            else:
+                self.log_test("Get Available Dates", False, f"Missing expected keys in response: {response}")
+                return False
+        else:
+            self.log_test("Get Available Dates", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_demo_credentials_login(self):
+        """Test login with demo credentials provided in review request"""
+        print("\n🔑 Testing Demo Credentials...")
+        
+        # Test client demo login
+        client_login_data = {
+            "email": "demo_client_ff2129@test.com",
+            "password": "Demo123!"
+        }
+        
+        success, status, response = self.make_request('POST', 'auth/login', client_login_data, expected_status=200)
+        
+        if success and 'access_token' in response:
+            self.log_test("Demo Client Login", True)
+            demo_client_token = response['access_token']
+        else:
+            self.log_test("Demo Client Login", False, f"Status: {status}, Response: {response}")
+            demo_client_token = None
+        
+        # Test professional demo login
+        professional_login_data = {
+            "email": "demo_doctor_e5baef@test.com",
+            "password": "Demo123!"
+        }
+        
+        success, status, response = self.make_request('POST', 'auth/login', professional_login_data, expected_status=200)
+        
+        if success and 'access_token' in response:
+            self.log_test("Demo Professional Login", True)
+            demo_professional_token = response['access_token']
+        else:
+            self.log_test("Demo Professional Login", False, f"Status: {status}, Response: {response}")
+            demo_professional_token = None
+        
+        return demo_client_token, demo_professional_token
+
+    def test_demo_calendar_access(self):
+        """Test access to demo calendar dr-juan-perez-b6a389"""
+        success, status, response = self.make_request('GET', 'calendars/dr-juan-perez-b6a389', expected_status=200)
+        
+        if success and response.get('url_slug') == 'dr-juan-perez-b6a389':
+            self.log_test("Demo Calendar Access", True)
+            return response.get('id')
+        else:
+            self.log_test("Demo Calendar Access", False, f"Status: {status}, Response: {response}")
+            return None
 
     def test_get_appointments_employer(self):
         """Test getting appointments as employer"""
