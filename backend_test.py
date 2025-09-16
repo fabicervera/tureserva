@@ -588,13 +588,13 @@ class TurnosProAPITester:
 
     def test_my_appointments_authentication(self):
         """Test that my-appointments requires authentication"""
-        success, status, response = self.make_request('GET', 'appointments/my-appointments', expected_status=401)
+        success, status, response = self.make_request('GET', 'appointments/my-appointments', expected_status=403)
         
-        if success:  # Should fail with 401
+        if success:  # Should fail with 403 (FastAPI returns 403 for missing auth)
             self.log_test("My Appointments Authentication", True, "Correctly requires authentication")
             return True
         else:
-            self.log_test("My Appointments Authentication", False, f"Expected 401, got {status}: {response}")
+            self.log_test("My Appointments Authentication", False, f"Expected 403, got {status}: {response}")
             return False
 
     def test_my_appointments_client_only(self):
