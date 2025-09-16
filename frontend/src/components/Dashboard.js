@@ -964,7 +964,7 @@ const Dashboard = () => {
                   <CardContent>
                     {myAppointments.length === 0 ? (
                       <div className="text-center py-8">
-                        <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <CalendarIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No tienes turnos programados</h3>
                         <p className="text-gray-600">Reserva tu primer turno desde la sección "Descubrir Profesionales"</p>
                       </div>
