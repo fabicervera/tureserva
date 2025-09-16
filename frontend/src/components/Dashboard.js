@@ -152,6 +152,50 @@ const Dashboard = () => {
     }
   };
 
+  // Función para filtrar turnos
+  const filterAppointments = () => {
+    let filtered = [...myAppointments];
+    
+    // Filtrar por fecha (solo futuros si showFutureOnly está activo)
+    if (showFutureOnly) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(apt => {
+        const appointmentDate = new Date(apt.appointment_date);
+        return appointmentDate >= today;
+      });
+    }
+    
+    // Filtrar por búsqueda
+    if (appointmentSearch.trim()) {
+      const searchLower = appointmentSearch.toLowerCase();
+      filtered = filtered.filter(apt => {
+        return (
+          apt.calendar_info?.business_name?.toLowerCase().includes(searchLower) ||
+          apt.calendar_info?.calendar_name?.toLowerCase().includes(searchLower) ||
+          apt.professional_info?.full_name?.toLowerCase().includes(searchLower) ||
+          apt.notes?.toLowerCase().includes(searchLower) ||
+          apt.appointment_date.includes(appointmentSearch) ||
+          apt.appointment_time.includes(appointmentSearch)
+        );
+      });
+    }
+    
+    // Ordenar por fecha y hora (más recientes primero si no es futureOnly, futuros primero si es futureOnly)
+    filtered.sort((a, b) => {
+      const dateA = new Date(`${a.appointment_date} ${a.appointment_time}`);
+      const dateB = new Date(`${b.appointment_date} ${b.appointment_time}`);
+      return showFutureOnly ? dateA - dateB : dateB - dateA;
+    });
+    
+    setFilteredAppointments(filtered);
+  };
+
+  // useEffect para filtrar automáticamente cuando cambien los datos
+  useEffect(() => {
+    filterAppointments();
+  }, [myAppointments, appointmentSearch, showFutureOnly]);
+
   const loadLocations = async () => {
     try {
       const response = await axios.get(`${API}/locations`);
