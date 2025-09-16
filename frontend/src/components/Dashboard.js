@@ -995,7 +995,7 @@ const Dashboard = () => {
                                 
                                 <div className="flex items-center space-x-4 text-sm text-gray-500">
                                   <div className="flex items-center space-x-1">
-                                    <CalendarIcon className="w-4 h-4" />
+                                    <Calendar className="w-4 h-4" />
                                     <span>{new Date(appointment.appointment_date).toLocaleDateString()}</span>
                                   </div>
                                   <div className="flex items-center space-x-1">
