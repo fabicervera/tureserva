@@ -10,8 +10,7 @@ import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { 
-  Calendar, 
-  Calendar as CalendarIcon,
+  Calendar as CalendarIcon, 
   Plus, 
   Settings, 
   CreditCard, 
