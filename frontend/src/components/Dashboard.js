@@ -50,6 +50,11 @@ const Dashboard = () => {
   const [selectedCity, setSelectedCity] = useState(user?.location?.city || 'all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   
+  // Estados para la búsqueda y filtrado de turnos
+  const [appointmentSearch, setAppointmentSearch] = useState('');
+  const [showFutureOnly, setShowFutureOnly] = useState(true);
+  const [filteredAppointments, setFilteredAppointments] = useState([]);
+  
   const [newCalendar, setNewCalendar] = useState({
     calendar_name: '',
     business_name: '',
