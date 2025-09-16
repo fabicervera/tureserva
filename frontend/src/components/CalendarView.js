@@ -638,13 +638,23 @@ const CalendarView = () => {
                               <p className="text-sm text-gray-600 italic">"{appointment.notes}"</p>
                             )}
                           </div>
-                          <Badge variant={
-                            appointment.status === 'confirmed' ? 'default' :
-                            appointment.status === 'cancelled' ? 'destructive' : 'secondary'
-                          }>
-                            {appointment.status === 'confirmed' ? 'Confirmado' :
-                             appointment.status === 'cancelled' ? 'Cancelado' : 'Completado'}
-                          </Badge>
+                          <div className="flex items-center space-x-3">
+                            <Badge variant={
+                              appointment.status === 'confirmed' ? 'default' :
+                              appointment.status === 'cancelled' ? 'destructive' : 'secondary'
+                            }>
+                              {appointment.status === 'confirmed' ? 'Confirmado' :
+                               appointment.status === 'cancelled' ? 'Cancelado' : 'Completado'}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => deleteAppointment(appointment.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
