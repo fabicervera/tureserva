@@ -94,9 +94,9 @@ const Dashboard = () => {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
-      if (selectedProvince) params.append('province', selectedProvince);
-      if (selectedCity) params.append('city', selectedCity);
-      if (selectedCategory) params.append('category', selectedCategory);
+      if (selectedProvince && selectedProvince !== 'all') params.append('province', selectedProvince);
+      if (selectedCity && selectedCity !== 'all') params.append('city', selectedCity);
+      if (selectedCategory && selectedCategory !== 'all') params.append('category', selectedCategory);
 
       const response = await axios.get(`${API}/calendars?${params.toString()}`);
       setCalendars(response.data);
