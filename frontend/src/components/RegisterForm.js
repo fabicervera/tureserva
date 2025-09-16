@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import { Button } from './ui/button';
@@ -6,25 +6,68 @@ import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import { AlertCircle, CheckCircle, User, Briefcase } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { AlertCircle, CheckCircle, User, Briefcase, MapPin } from 'lucide-react';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     full_name: '',
-    user_type: 'client'
+    user_type: 'client',
+    location: {
+      country: 'argentina',
+      province: '',
+      city: ''
+    }
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [locations, setLocations] = useState(null);
+  const [availableCities, setAvailableCities] = useState([]);
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    loadLocations();
+  }, []);
+
+  useEffect(() => {
+    if (formData.location.province && locations) {
+      const province = locations.argentina.provinces[formData.location.province];
+      setAvailableCities(province ? province.cities : []);
+      // Reset city when province changes
+      setFormData(prev => ({
+        ...prev,
+        location: { ...prev.location, city: '' }
+      }));
+    }
+  }, [formData.location.province, locations]);
+
+  const loadLocations = async () => {
+    try {
+      const response = await axios.get(`${API}/locations`);
+      setLocations(response.data);
+    } catch (error) {
+      console.error('Error loading locations:', error);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    if (!formData.location.province || !formData.location.city) {
+      setError('Por favor selecciona tu provincia y ciudad');
+      setLoading(false);
+      return;
+    }
 
     const result = await register(formData);
     
@@ -96,6 +139,12 @@ const RegisterForm = () => {
               </div>
               <span className="text-gray-700">Para profesionales que ofrecen servicios</span>
             </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <MapPin className="w-4 h-4 text-green-600" />
+              </div>
+              <span className="text-gray-700">Conecta con profesionales de tu zona</span>
+            </div>
           </div>
         </div>
 
@@ -163,6 +212,61 @@ const RegisterForm = () => {
                     className="h-12 px-4 bg-white/50 border-gray-200 focus:border-indigo-400 focus:ring-indigo-400/20"
                     placeholder="••••••••"
                   />
+                </div>
+
+                {/* Location Selection */}
+                <div className="space-y-4">
+                  <Label className="text-sm font-medium text-gray-700 flex items-center space-x-2">
+                    <MapPin className="w-4 h-4" />
+                    <span>Ubicación</span>
+                  </Label>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="province" className="text-xs text-gray-600">Provincia</Label>
+                      <Select
+                        value={formData.location.province}
+                        onValueChange={(value) => setFormData(prev => ({
+                          ...prev,
+                          location: { ...prev.location, province: value }
+                        }))}
+                      >
+                        <SelectTrigger className="h-11 bg-white/50">
+                          <SelectValue placeholder="Seleccionar" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locations && Object.entries(locations.argentina.provinces).map(([key, province]) => (
+                            <SelectItem key={key} value={key}>
+                              {province.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="city" className="text-xs text-gray-600">Ciudad</Label>
+                      <Select
+                        value={formData.location.city}
+                        onValueChange={(value) => setFormData(prev => ({
+                          ...prev,
+                          location: { ...prev.location, city: value }
+                        }))}
+                        disabled={!formData.location.province}
+                      >
+                        <SelectTrigger className="h-11 bg-white/50">
+                          <SelectValue placeholder="Seleccionar" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableCities.map((city) => (
+                            <SelectItem key={city} value={city}>
+                              {city}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-3">

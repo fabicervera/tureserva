@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { 
   Calendar, 
   Plus, 
@@ -18,7 +19,11 @@ import {
   Share2,
   LogOut,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Search,
+  MapPin,
+  UserPlus,
+  Heart
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -29,18 +34,46 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [calendars, setCalendars] = useState([]);
   const [subscriptionPlans, setSubscriptionPlans] = useState([]);
+  const [friendshipRequests, setFriendshipRequests] = useState([]);
+  const [locations, setLocations] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProvince, setSelectedProvince] = useState(user?.location?.province || '');
+  const [selectedCity, setSelectedCity] = useState(user?.location?.city || '');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  
   const [newCalendar, setNewCalendar] = useState({
     calendar_name: '',
     business_name: '',
     description: '',
-    url_slug: ''
+    url_slug: '',
+    category: 'general'
   });
+
+  const categories = [
+    { value: 'general', label: 'General' },
+    { value: 'salud', label: 'Salud' },
+    { value: 'belleza', label: 'Belleza' },
+    { value: 'educacion', label: 'Educación' },
+    { value: 'servicios', label: 'Servicios' },
+    { value: 'fitness', label: 'Fitness' },
+    { value: 'consultoria', label: 'Consultoría' }
+  ];
 
   useEffect(() => {
     loadDashboardData();
+    loadLocations();
+    if (user?.user_type === 'employer') {
+      loadFriendshipRequests();
+    }
   }, []);
+
+  useEffect(() => {
+    if (user?.user_type === 'client') {
+      loadCalendars();
+    }
+  }, [searchTerm, selectedProvince, selectedCity, selectedCategory]);
 
   const loadDashboardData = async () => {
     try {
@@ -57,16 +90,75 @@ const Dashboard = () => {
     }
   };
 
+  const loadCalendars = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (selectedProvince) params.append('province', selectedProvince);
+      if (selectedCity) params.append('city', selectedCity);
+      if (selectedCategory) params.append('category', selectedCategory);
+
+      const response = await axios.get(`${API}/calendars?${params.toString()}`);
+      setCalendars(response.data);
+    } catch (error) {
+      console.error('Error loading calendars:', error);
+    }
+  };
+
+  const loadLocations = async () => {
+    try {
+      const response = await axios.get(`${API}/locations`);
+      setLocations(response.data);
+    } catch (error) {
+      console.error('Error loading locations:', error);
+    }
+  };
+
+  const loadFriendshipRequests = async () => {
+    try {
+      const response = await axios.get(`${API}/friendships/requests`);
+      setFriendshipRequests(response.data);
+    } catch (error) {
+      console.error('Error loading friendship requests:', error);
+    }
+  };
+
   const handleCreateCalendar = async (e) => {
     e.preventDefault();
     try {
       await axios.post(`${API}/calendars`, newCalendar);
-      setNewCalendar({ calendar_name: '', business_name: '', description: '', url_slug: '' });
+      setNewCalendar({ 
+        calendar_name: '', 
+        business_name: '', 
+        description: '', 
+        url_slug: '', 
+        category: 'general' 
+      });
       setShowCreateForm(false);
       loadDashboardData();
     } catch (error) {
       console.error('Error creating calendar:', error);
       alert('Error al crear el calendario: ' + (error.response?.data?.detail || 'Error desconocido'));
+    }
+  };
+
+  const handleFriendshipResponse = async (friendshipId, accept) => {
+    try {
+      await axios.post(`${API}/friendships/${friendshipId}/respond`, { accept });
+      loadFriendshipRequests();
+    } catch (error) {
+      console.error('Error responding to friendship:', error);
+    }
+  };
+
+  const requestFriendship = async (employerId) => {
+    try {
+      await axios.post(`${API}/friendships/request`, { employer_id: employerId });
+      alert('¡Solicitud de amistad enviada!');
+      loadCalendars(); // Refresh to update UI
+    } catch (error) {
+      console.error('Error requesting friendship:', error);
+      alert(error.response?.data?.detail || 'Error al solicitar amistad');
     }
   };
 
@@ -87,6 +179,12 @@ const Dashboard = () => {
     const link = `${window.location.origin}/c/${urlSlug}`;
     navigator.clipboard.writeText(link);
     alert('¡Enlace copiado al portapapeles!');
+  };
+
+  const getAvailableCities = () => {
+    if (!locations || !selectedProvince) return [];
+    const province = locations.argentina.provinces[selectedProvince];
+    return province ? province.cities : [];
   };
 
   if (loading) {
@@ -113,10 +211,21 @@ const Dashboard = () => {
               <Badge variant="outline" className="text-xs">
                 {user?.user_type === 'employer' ? 'Profesional' : 'Cliente'}
               </Badge>
+              {user?.location && (
+                <Badge variant="secondary" className="text-xs flex items-center space-x-1">
+                  <MapPin className="w-3 h-3" />
+                  <span>{locations?.argentina.provinces[user.location.province]?.name}, {user.location.city}</span>
+                </Badge>
+              )}
             </div>
             
             <div className="flex items-center space-x-4">
               <span className="text-gray-700 font-medium">{user?.full_name}</span>
+              {friendshipRequests.length > 0 && (
+                <Badge variant="destructive" className="animate-pulse">
+                  {friendshipRequests.length} solicitudes
+                </Badge>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -141,7 +250,7 @@ const Dashboard = () => {
           <p className="text-gray-600">
             {user?.user_type === 'employer' 
               ? 'Gestiona tus calendarios y configuraciones desde aquí'
-              : 'Explora los calendarios disponibles y reserva tus turnos'
+              : 'Explora los profesionales disponibles y reserva tus turnos'
             }
           </p>
         </div>
@@ -149,6 +258,56 @@ const Dashboard = () => {
         {user?.user_type === 'employer' ? (
           // Employer Dashboard
           <div className="space-y-8">
+            
+            {/* Friendship Requests */}
+            {friendshipRequests.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <UserPlus className="w-5 h-5" />
+                    <span>Solicitudes de Amistad</span>
+                    <Badge variant="destructive">{friendshipRequests.length}</Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Clientes que quieren acceder a tus calendarios
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {friendshipRequests.map((request) => (
+                      <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="space-y-1">
+                          <p className="font-medium">{request.client.full_name}</p>
+                          <p className="text-sm text-gray-600">{request.client.email}</p>
+                          <p className="text-xs text-gray-500 flex items-center space-x-1">
+                            <MapPin className="w-3 h-3" />
+                            <span>
+                              {locations?.argentina.provinces[request.client.location.province]?.name}, {request.client.location.city}
+                            </span>
+                          </p>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleFriendshipResponse(request.id, true)}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            Aceptar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleFriendshipResponse(request.id, false)}
+                          >
+                            Rechazar
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             
             {/* Quick Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -175,7 +334,7 @@ const Dashboard = () => {
                     <div>
                       <p className="text-sm text-gray-600">Activos</p>
                       <p className="text-2xl font-bold text-gray-900">
-                        {calendars.filter(cal => cal.is_active).length}
+                        {calendars.filter(cal => cal.is_active && cal.subscription_expires && new Date(cal.subscription_expires) > new Date()).length}
                       </p>
                     </div>
                   </div>
@@ -186,13 +345,11 @@ const Dashboard = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                      <CreditCard className="w-6 h-6 text-purple-600" />
+                      <Heart className="w-6 h-6 text-purple-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Suscripciones</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {calendars.filter(cal => cal.subscription_expires && new Date(cal.subscription_expires) > new Date()).length}
-                      </p>
+                      <p className="text-sm text-gray-600">Solicitudes</p>
+                      <p className="text-2xl font-bold text-gray-900">{friendshipRequests.length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -255,6 +412,40 @@ const Dashboard = () => {
                       </div>
                     </div>
                     
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="category">Categoría</Label>
+                        <Select
+                          value={newCalendar.category}
+                          onValueChange={(value) => setNewCalendar({...newCalendar, category: value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((cat) => (
+                              <SelectItem key={cat.value} value={cat.value}>
+                                {cat.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="url_slug">URL del Calendario</Label>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-500">/c/</span>
+                          <Input
+                            id="url_slug"
+                            value={newCalendar.url_slug}
+                            onChange={(e) => setNewCalendar({...newCalendar, url_slug: generateSlug(e.target.value)})}
+                            placeholder="dr-juan-perez"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
                     <div>
                       <Label htmlFor="description">Descripción</Label>
                       <Input
@@ -263,20 +454,6 @@ const Dashboard = () => {
                         onChange={(e) => setNewCalendar({...newCalendar, description: e.target.value})}
                         placeholder="Consultas médicas generales"
                       />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="url_slug">URL del Calendario</Label>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-500">{window.location.origin}/c/</span>
-                        <Input
-                          id="url_slug"
-                          value={newCalendar.url_slug}
-                          onChange={(e) => setNewCalendar({...newCalendar, url_slug: generateSlug(e.target.value)})}
-                          placeholder="dr-juan-perez"
-                          required
-                        />
-                      </div>
                     </div>
                     
                     <div className="flex space-x-3">
@@ -325,9 +502,14 @@ const Dashboard = () => {
                             <CardTitle className="text-lg">{calendar.calendar_name}</CardTitle>
                             <CardDescription>{calendar.business_name}</CardDescription>
                           </div>
-                          <Badge variant={calendar.is_active ? "default" : "secondary"}>
-                            {calendar.is_active ? "Activo" : "Inactivo"}
-                          </Badge>
+                          <div className="flex space-x-2">
+                            <Badge variant={calendar.is_active ? "default" : "secondary"}>
+                              {calendar.is_active ? "Activo" : "Inactivo"}
+                            </Badge>
+                            <Badge variant="outline">
+                              {categories.find(c => c.value === calendar.category)?.label || calendar.category}
+                            </Badge>
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent>
@@ -412,40 +594,151 @@ const Dashboard = () => {
         ) : (
           // Client Dashboard
           <div className="space-y-8">
+            
+            {/* Search and Filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Search className="w-5 h-5" />
+                  <span>Buscar Profesionales</span>
+                </CardTitle>
+                <CardDescription>
+                  Encuentra profesionales en tu zona
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <Label htmlFor="search">Buscar</Label>
+                    <Input
+                      id="search"
+                      placeholder="Nombre, servicio..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="category">Categoría</Label>
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Todas las categorías</SelectItem>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="province">Provincia</Label>
+                    <Select value={selectedProvince} onValueChange={(value) => {
+                      setSelectedProvince(value);
+                      setSelectedCity('');
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Tu provincia" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations && Object.entries(locations.argentina.provinces).map(([key, province]) => (
+                          <SelectItem key={key} value={key}>
+                            {province.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="city">Ciudad</Label>
+                    <Select 
+                      value={selectedCity} 
+                      onValueChange={setSelectedCity}
+                      disabled={!selectedProvince}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Tu ciudad" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Todas las ciudades</SelectItem>
+                        {getAvailableCities().map((city) => (
+                          <SelectItem key={city} value={city}>
+                            {city}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Calendars List */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Calendar className="w-5 h-5" />
-                  <span>Calendarios Disponibles</span>
+                  <span>Profesionales Disponibles</span>
                 </CardTitle>
                 <CardDescription>
-                  Explora los profesionales disponibles y reserva tu turno
+                  Solo se muestran calendarios con suscripción activa en tu zona
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {calendars.length === 0 ? (
                   <div className="text-center py-8">
                     <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No hay calendarios disponibles</h3>
-                    <p className="text-gray-600">Los profesionales están configurando sus calendarios</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No hay profesionales disponibles</h3>
+                    <p className="text-gray-600">Intenta cambiar los filtros de búsqueda</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {calendars.map((calendar) => (
                       <Card key={calendar.id} className="hover:shadow-lg transition-shadow">
                         <CardHeader>
-                          <CardTitle className="text-lg">{calendar.business_name}</CardTitle>
-                          <CardDescription>{calendar.calendar_name}</CardDescription>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle className="text-lg">{calendar.business_name}</CardTitle>
+                              <CardDescription>{calendar.calendar_name}</CardDescription>
+                            </div>
+                            <Badge variant="outline">
+                              {categories.find(c => c.value === calendar.category)?.label || calendar.category}
+                            </Badge>
+                          </div>
                         </CardHeader>
                         <CardContent>
-                          <p className="text-sm text-gray-600 mb-4">{calendar.description}</p>
-                          <Button
-                            onClick={() => window.open(`/c/${calendar.url_slug}`, '_blank')}
-                            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600"
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            Ver Calendario
-                          </Button>
+                          <p className="text-sm text-gray-600 mb-3">{calendar.description}</p>
+                          
+                          {calendar.location && (
+                            <div className="flex items-center space-x-1 text-xs text-gray-500 mb-4">
+                              <MapPin className="w-3 h-3" />
+                              <span>
+                                {locations?.argentina.provinces[calendar.location.province]?.name}, {calendar.location.city}
+                              </span>
+                            </div>
+                          )}
+                          
+                          <div className="flex space-x-2">
+                            <Button
+                              onClick={() => window.open(`/c/${calendar.url_slug}`, '_blank')}
+                              className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600"
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              Ver Calendario
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => requestFriendship(calendar.employer_id)}
+                            >
+                              <UserPlus className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     ))}
