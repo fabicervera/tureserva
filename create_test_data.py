@@ -8,7 +8,7 @@ import json
 import uuid
 from datetime import datetime, timedelta, timezone
 
-BASE_URL = "https://turnos-pro.preview.emergentagent.com/api"
+BASE_URL = "https://appt-view-enhance.preview.emergentagent.com/api"
 
 def create_test_employer_and_calendar():
     """Crear empleador de prueba con calendario configurado"""
@@ -142,7 +142,7 @@ def create_test_employer_and_calendar():
         "employer_email": employer_email,
         "client_email": client_email,
         "calendar_slug": calendar_slug,
-        "calendar_url": f"https://turnos-pro.preview.emergentagent.com/c/{calendar_slug}"
+        "calendar_url": f"https://appt-view-enhance.preview.emergentagent.com/c/{calendar_slug}"
     }
 
 def create_additional_calendars():
@@ -261,7 +261,7 @@ def create_additional_calendars():
             results.append({
                 "name": cat_data["name"],
                 "email": employer_email,
-                "url": f"https://turnos-pro.preview.emergentagent.com/c/{calendar_slug}"
+                "url": f"https://appt-view-enhance.preview.emergentagent.com/c/{calendar_slug}"
             })
             print(f"✅ {cat_data['name']}: /c/{calendar_slug}")
         else:

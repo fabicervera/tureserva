@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import uuid
 
 class TurnosProCorrectionsAPITester:
-    def __init__(self, base_url="https://turnos-pro.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://appt-view-enhance.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.employer_token = None
         self.client_token = None
