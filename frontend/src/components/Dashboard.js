@@ -41,7 +41,7 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProvince, setSelectedProvince] = useState(user?.location?.province || '');
   const [selectedCity, setSelectedCity] = useState(user?.location?.city || '');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   
   const [newCalendar, setNewCalendar] = useState({
     calendar_name: '',
