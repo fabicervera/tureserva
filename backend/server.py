@@ -509,6 +509,69 @@ async def respond_to_friendship(friendship_id: str, response_data: dict, current
     
     return {"message": f"Friendship request {'accepted' if accept else 'rejected'}", "status": new_status}
 
+@api_router.get("/friendships/my-services")
+async def get_my_services(current_user: User = Depends(get_current_user)):
+    if current_user.user_type != "client":
+        raise HTTPException(status_code=403, detail="Only clients can view their services")
+    
+    # Get accepted friendships
+    friendships = await db.friendships.find({
+        "client_id": current_user.id,
+        "status": "accepted"
+    }).to_list(100)
+    
+    # Get calendars for these friendships
+    result = []
+    for friendship in friendships:
+        calendar = await db.calendars.find_one({"employer_id": friendship["employer_id"]})
+        if calendar:
+            employer = await db.users.find_one({"id": friendship["employer_id"]})
+            result.append({
+                "friendship_id": friendship["id"],
+                "calendar": Calendar(**parse_from_mongo(calendar)).dict(),
+                "employer": {
+                    "id": employer["id"],
+                    "full_name": employer["full_name"],
+                    "email": employer["email"]
+                } if employer else None,
+                "accepted_at": friendship.get("responded_at")
+            })
+    
+    return result
+
+@api_router.get("/friendships/status/{employer_id}")
+async def get_friendship_status(employer_id: str, current_user: User = Depends(get_current_user)):
+    if current_user.user_type != "client":
+        raise HTTPException(status_code=403, detail="Only clients can check friendship status")
+    
+    friendship = await db.friendships.find_one({
+        "client_id": current_user.id,
+        "employer_id": employer_id
+    })
+    
+    if not friendship:
+        return {"status": "none", "can_request": True}
+    
+    return {
+        "status": friendship["status"],
+        "can_request": friendship["status"] in ["blocked"],
+        "friendship_id": friendship["id"]
+    }
+
+@api_router.delete("/friendships/{friendship_id}")
+async def remove_friendship(friendship_id: str, current_user: User = Depends(get_current_user)):
+    friendship = await db.friendships.find_one({"id": friendship_id})
+    
+    if not friendship:
+        raise HTTPException(status_code=404, detail="Friendship not found")
+    
+    # Only the client or employer involved can remove the friendship
+    if friendship["client_id"] != current_user.id and friendship["employer_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to remove this friendship")
+    
+    await db.friendships.delete_one({"id": friendship_id})
+    return {"message": "Friendship removed successfully"}
+
 # Appointments routes
 @api_router.post("/calendars/{calendar_id}/appointments", response_model=Appointment)
 async def create_appointment(calendar_id: str, appointment_data: AppointmentCreate, current_user: User = Depends(get_current_user)):
