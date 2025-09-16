@@ -101,3 +101,62 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "En la cuenta de clientes, la sección de Mis Turnos no aparece nombre del calendario, aparece todo menos eso, debería aparecer toda la info, nombre del calendario y nombre del profesional. Hay que agregar un buscador en la sección de turnos para buscar turnos y también que se muestre solo de la fecha del día en adelante, no necesitamos saber turnos transcurridos a menos que lo busquemos en el buscador, donde lo podemos buscar en ese input, por fecha, por nombre, por descripción o más."
+
+backend:
+  - task: "Modificar endpoint /appointments/my-appointments para incluir información del profesional"
+    implemented: false
+    working: "NA"
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Task identificada - necesita agregar información del profesional (employer) al endpoint"
+
+frontend:
+  - task: "Implementar buscador y filtros en sección Mis Turnos"
+    implemented: false
+    working: "NA"
+    file: "Dashboard.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Task identificada - agregar buscador y filtro para mostrar solo turnos futuros por defecto"
+
+  - task: "Actualizar UI para mostrar información completa del profesional"
+    implemented: false
+    working: "NA"
+    file: "Dashboard.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Task identificada - mostrar nombre del profesional en la UI"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 0
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Modificar endpoint /appointments/my-appointments para incluir información del profesional"
+    - "Implementar buscador y filtros en sección Mis Turnos"
+    - "Actualizar UI para mostrar información completa del profesional"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "main"
+      message: "Iniciando implementación para mejorar sección Mis Turnos - agregar info del profesional, buscador y filtros por fecha"
