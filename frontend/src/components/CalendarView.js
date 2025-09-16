@@ -19,7 +19,8 @@ import {
   Trash2,
   Save,
   Eye,
-  CreditCard
+  CreditCard,
+  CalendarDays
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
