@@ -40,7 +40,7 @@ const Dashboard = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProvince, setSelectedProvince] = useState(user?.location?.province || '');
-  const [selectedCity, setSelectedCity] = useState(user?.location?.city || '');
+  const [selectedCity, setSelectedCity] = useState(user?.location?.city || 'all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   
   const [newCalendar, setNewCalendar] = useState({
