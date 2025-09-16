@@ -222,10 +222,13 @@ async def register(user_data: UserCreate):
     # Create user
     hashed_password = get_password_hash(user_data.password)
     user_dict = user_data.dict()
-    user_dict["password"] = hashed_password
     user = User(**user_dict)
     
-    await db.users.insert_one(prepare_for_mongo(user.dict()))
+    # Store user with password in database
+    user_with_password = user.dict()
+    user_with_password["password"] = hashed_password
+    
+    await db.users.insert_one(prepare_for_mongo(user_with_password))
     return user
 
 @api_router.post("/auth/login", response_model=Token)
