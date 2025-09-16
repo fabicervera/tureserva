@@ -483,9 +483,11 @@ async def get_friendship_requests(current_user: User = Depends(get_current_user)
     return result
 
 @api_router.post("/friendships/{friendship_id}/respond")
-async def respond_to_friendship(friendship_id: str, accept: bool, current_user: User = Depends(get_current_user)):
+async def respond_to_friendship(friendship_id: str, response_data: dict, current_user: User = Depends(get_current_user)):
     if current_user.user_type != "employer":
         raise HTTPException(status_code=403, detail="Only employers can respond to friendship requests")
+    
+    accept = response_data.get("accept", False)
     
     friendship = await db.friendships.find_one({
         "id": friendship_id,
@@ -505,7 +507,7 @@ async def respond_to_friendship(friendship_id: str, accept: bool, current_user: 
         }}
     )
     
-    return {"message": f"Friendship request {'accepted' if accept else 'rejected'}"}
+    return {"message": f"Friendship request {'accepted' if accept else 'rejected'}", "status": new_status}
 
 # Appointments routes
 @api_router.post("/calendars/{calendar_id}/appointments", response_model=Appointment)
