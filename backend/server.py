@@ -310,7 +310,11 @@ async def get_calendar_settings(calendar_id: str):
         # Return default settings
         default_settings = CalendarSettings(calendar_id=calendar_id)
         return default_settings.dict()
-    return settings
+    
+    # Remove MongoDB's _id field and parse from mongo
+    if "_id" in settings:
+        del settings["_id"]
+    return parse_from_mongo(settings)
 
 # Appointments routes
 @api_router.post("/calendars/{calendar_id}/appointments", response_model=Appointment)
