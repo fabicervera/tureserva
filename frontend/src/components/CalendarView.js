@@ -290,7 +290,7 @@ const CalendarView = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="settings" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="settings" className="flex items-center space-x-2">
               <Settings className="w-4 h-4" />
               <span>Configuración</span>
@@ -306,10 +306,6 @@ const CalendarView = () => {
             <TabsTrigger value="appointments" className="flex items-center space-x-2">
               <Users className="w-4 h-4" />
               <span>Turnos</span>
-            </TabsTrigger>
-            <TabsTrigger value="payments" className="flex items-center space-x-2">
-              <CreditCard className="w-4 h-4" />
-              <span>Pagos</span>
             </TabsTrigger>
           </TabsList>
 
