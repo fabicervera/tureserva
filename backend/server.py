@@ -629,6 +629,99 @@ async def get_calendar_appointments(calendar_id: str, current_user: User = Depen
     
     return [Appointment(**parse_from_mongo(apt)) for apt in appointments]
 
+@api_router.get("/appointments/my-appointments", response_model=List[Appointment])
+async def get_my_appointments(current_user: User = Depends(get_current_user)):
+    """Get all appointments for the current client"""
+    if current_user.user_type != "client":
+        raise HTTPException(status_code=403, detail="Only clients can view their appointments")
+    
+    appointments = await db.appointments.find({
+        "client_id": current_user.id
+    }).to_list(1000)
+    
+    # Enrich with calendar information
+    enriched_appointments = []
+    for apt in appointments:
+        calendar = await db.calendars.find_one({"id": apt["calendar_id"]})
+        if calendar:
+            apt_dict = parse_from_mongo(apt)
+            apt_dict["calendar_info"] = {
+                "business_name": calendar.get("business_name", ""),
+                "calendar_name": calendar.get("calendar_name", ""),
+                "url_slug": calendar.get("url_slug", "")
+            }
+            enriched_appointments.append(apt_dict)
+    
+    return enriched_appointments
+
+@api_router.delete("/appointments/{appointment_id}")
+async def delete_appointment(appointment_id: str, current_user: User = Depends(get_current_user)):
+    """Delete an appointment (only by employer or client involved)"""
+    appointment = await db.appointments.find_one({"id": appointment_id})
+    
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    # Check if user is authorized to delete
+    calendar = await db.calendars.find_one({"id": appointment["calendar_id"]})
+    if not calendar:
+        raise HTTPException(status_code=404, detail="Calendar not found")
+    
+    # Only the client who made the appointment or the employer can delete it
+    if (current_user.user_type == "client" and appointment["client_id"] != current_user.id) or \
+       (current_user.user_type == "employer" and calendar["employer_id"] != current_user.id):
+        raise HTTPException(status_code=403, detail="Not authorized to delete this appointment")
+    
+    await db.appointments.delete_one({"id": appointment_id})
+    return {"message": "Appointment deleted successfully"}
+
+@api_router.get("/calendars/{calendar_id}/available-dates")
+async def get_available_dates(calendar_id: str, month: int, year: int):
+    """Get available dates for a calendar in a specific month"""
+    calendar = await db.calendars.find_one({"id": calendar_id, "is_active": True})
+    if not calendar:
+        raise HTTPException(status_code=404, detail="Calendar not found")
+    
+    settings = await db.calendar_settings.find_one({"calendar_id": calendar_id})
+    if not settings:
+        return {"available_dates": [], "blocked_dates": [], "no_slots_dates": []}
+    
+    import calendar as cal
+    from datetime import date
+    
+    # Get all dates in the month
+    _, last_day = cal.monthrange(year, month)
+    dates_info = {
+        "available_dates": [],
+        "blocked_dates": [],
+        "no_slots_dates": []
+    }
+    
+    for day in range(1, last_day + 1):
+        current_date = date(year, month, day)
+        date_string = current_date.isoformat()
+        
+        # Skip past dates
+        if current_date < date.today():
+            continue
+        
+        # Check if date is blocked
+        day_of_week = current_date.weekday()
+        if (date_string in settings.get("blocked_dates", [])) or \
+           (day_of_week == 5 and settings.get("blocked_saturdays", False)) or \
+           (day_of_week == 6 and settings.get("blocked_sundays", False)):
+            dates_info["blocked_dates"].append(date_string)
+            continue
+        
+        # Check if date has available slots
+        available_slots_response = await get_available_slots(calendar_id, date_string)
+        if available_slots_response:
+            dates_info["available_dates"].append(date_string)
+        else:
+            dates_info["no_slots_dates"].append(date_string)
+    
+    return dates_info
+
 @api_router.get("/calendars/{calendar_id}/available-slots")
 async def get_available_slots(calendar_id: str, date: str):
     """Get available time slots for a specific date"""
