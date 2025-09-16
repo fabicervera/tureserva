@@ -58,23 +58,28 @@ class TurnosProAPITester:
             return False, 0, {"error": str(e)}
 
     def test_employer_registration(self):
-        """Test employer registration"""
+        """Test employer registration with location (NEW FEATURE)"""
         test_email = f"employer_{uuid.uuid4().hex[:8]}@test.com"
         employer_data = {
             "email": test_email,
             "password": "TestPass123!",
             "full_name": "Test Employer",
-            "user_type": "employer"
+            "user_type": "employer",
+            "location": {
+                "country": "argentina",
+                "province": "Buenos Aires",
+                "city": "La Plata"
+            }
         }
         
         success, status, response = self.make_request('POST', 'auth/register', employer_data, expected_status=200)
         
-        if success:
+        if success and response.get('location'):
             self.employer_user = response
-            self.log_test("Employer Registration", True)
+            self.log_test("Employer Registration with Location", True)
             return True
         else:
-            self.log_test("Employer Registration", False, f"Status: {status}, Response: {response}")
+            self.log_test("Employer Registration with Location", False, f"Status: {status}, Response: {response}")
             return False
 
     def test_client_registration(self):
