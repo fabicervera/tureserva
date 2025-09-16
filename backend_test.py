@@ -172,29 +172,8 @@ class TurnosProAPITester:
             return False
 
     def test_create_calendar(self):
-        """Test calendar creation (employer only)"""
-        if not self.employer_token:
-            self.log_test("Create Calendar", False, "No employer token available")
-            return False
-            
-        calendar_slug = f"test-calendar-{uuid.uuid4().hex[:8]}"
-        calendar_data = {
-            "calendar_name": "Test Calendar",
-            "business_name": "Test Business",
-            "description": "A test calendar for automated testing",
-            "url_slug": calendar_slug
-        }
-        
-        success, status, response = self.make_request('POST', 'calendars', calendar_data, token=self.employer_token, expected_status=200)
-        
-        if success:
-            self.calendar_id = response.get('id')
-            self.calendar_slug = calendar_slug
-            self.log_test("Create Calendar", True)
-            return True
-        else:
-            self.log_test("Create Calendar", False, f"Status: {status}, Response: {response}")
-            return False
+        """Test calendar creation (legacy test)"""
+        return self.test_create_calendar_with_free_subscription()
 
     def test_get_calendars_employer(self):
         """Test getting calendars as employer"""
