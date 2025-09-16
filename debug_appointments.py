@@ -143,7 +143,11 @@ def test_my_appointments(client_token):
         else:
             print("No appointments found")
     else:
-        print(f"Error: {response.json()}")
+        try:
+            print(f"Error: {response.json()}")
+        except:
+            print(f"Error (non-JSON): {response.text}")
+            print(f"Status: {response.status_code}")
 
 def main():
     print("🔍 Debugging Enhanced My-Appointments Endpoint...")
