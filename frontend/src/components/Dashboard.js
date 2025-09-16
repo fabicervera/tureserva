@@ -222,6 +222,25 @@ const Dashboard = () => {
     }
   };
 
+  const deleteAppointment = async (appointmentId) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este turno?')) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/appointments/${appointmentId}`);
+      alert('Turno eliminado exitosamente');
+      if (user?.user_type === 'employer') {
+        loadDashboardData(); // Reload appointments for employer
+      } else {
+        loadMyAppointments(); // Reload appointments for client
+      }
+    } catch (error) {
+      console.error('Error deleting appointment:', error);
+      alert('Error al eliminar turno: ' + (error.response?.data?.detail || 'Error desconocido'));
+    }
+  };
+
   const generateSlug = (name) => {
     return name.toLowerCase()
       .replace(/[áàäâ]/g, 'a')
