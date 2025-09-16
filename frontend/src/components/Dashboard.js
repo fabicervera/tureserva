@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { 
   Calendar, 
+  Calendar as CalendarIcon,
   Plus, 
   Settings, 
   CreditCard, 
