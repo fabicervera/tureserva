@@ -1,7 +1,7 @@
 import requests
 import sys
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import uuid
 
 class TurnosProAPITester:
@@ -13,6 +13,7 @@ class TurnosProAPITester:
         self.client_user = None
         self.calendar_id = None
         self.calendar_slug = None
+        self.friendship_id = None
         self.tests_run = 0
         self.tests_passed = 0
         self.errors = []
