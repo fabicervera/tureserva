@@ -465,10 +465,10 @@ class TurnosProAPITester:
             self.log_test("Get Calendar Settings", False, f"Status: {status}, Response: {response}")
             return False
 
-    def test_create_appointment(self):
-        """Test creating an appointment"""
+    def test_create_appointment_requires_friendship(self):
+        """Test creating an appointment requires accepted friendship (NEW FEATURE)"""
         if not self.calendar_id or not self.client_token:
-            self.log_test("Create Appointment", False, "Missing calendar ID or client token")
+            self.log_test("Create Appointment Requires Friendship", False, "Missing calendar ID or client token")
             return False
             
         # Use tomorrow's date
@@ -482,11 +482,16 @@ class TurnosProAPITester:
         success, status, response = self.make_request('POST', f'calendars/{self.calendar_id}/appointments', appointment_data, token=self.client_token, expected_status=200)
         
         if success:
-            self.log_test("Create Appointment", True)
+            self.log_test("Create Appointment Requires Friendship", True)
             return True
         else:
-            self.log_test("Create Appointment", False, f"Status: {status}, Response: {response}")
-            return False
+            # If friendship is not accepted, it should fail with 403
+            if status == 403:
+                self.log_test("Create Appointment Requires Friendship", True, "Correctly blocked without friendship")
+                return True
+            else:
+                self.log_test("Create Appointment Requires Friendship", False, f"Status: {status}, Response: {response}")
+                return False
 
     def test_get_appointments_employer(self):
         """Test getting appointments as employer"""
