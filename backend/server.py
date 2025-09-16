@@ -639,17 +639,33 @@ async def get_my_appointments(current_user: User = Depends(get_current_user)):
         "client_id": current_user.id
     }).to_list(1000)
     
-    # Enrich with calendar information
+    # Enrich with calendar and professional information
     enriched_appointments = []
     for apt in appointments:
         calendar = await db.calendars.find_one({"id": apt["calendar_id"]})
         if calendar:
+            # Get professional (employer) information
+            professional = await db.users.find_one({"id": calendar["employer_id"]})
+            
             apt_dict = parse_from_mongo(apt)
             apt_dict["calendar_info"] = {
                 "business_name": calendar.get("business_name", ""),
                 "calendar_name": calendar.get("calendar_name", ""),
                 "url_slug": calendar.get("url_slug", "")
             }
+            
+            # Add professional information
+            if professional:
+                apt_dict["professional_info"] = {
+                    "full_name": professional.get("full_name", ""),
+                    "email": professional.get("email", "")
+                }
+            else:
+                apt_dict["professional_info"] = {
+                    "full_name": "Profesional no disponible",
+                    "email": ""
+                }
+                
             enriched_appointments.append(apt_dict)
     
     return enriched_appointments
