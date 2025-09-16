@@ -355,9 +355,9 @@ async def get_calendars(
             if current_user.location.city:
                 query["location.city"] = current_user.location.city
         else:
-            if province:
+            if province and province != 'all':
                 query["location.province"] = province
-            if city:
+            if city and city != 'all':
                 query["location.city"] = city
         
         # Only show calendars with active subscriptions
