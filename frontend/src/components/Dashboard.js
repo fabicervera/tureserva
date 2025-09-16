@@ -725,9 +725,10 @@ const Dashboard = () => {
           <div className="space-y-8">
             
             <Tabs defaultValue="discover" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="discover">Descubrir Profesionales</TabsTrigger>
                 <TabsTrigger value="services">Mis Servicios</TabsTrigger>
+                <TabsTrigger value="appointments">Mis Turnos</TabsTrigger>
               </TabsList>
               
               <TabsContent value="discover" className="space-y-6">
