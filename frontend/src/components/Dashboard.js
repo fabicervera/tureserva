@@ -949,6 +949,94 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
               </TabsContent>
+              
+              <TabsContent value="appointments" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Calendar className="w-5 h-5" />
+                      <span>Mis Turnos</span>
+                    </CardTitle>
+                    <CardDescription>
+                      Todos tus turnos programados y pasados
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {myAppointments.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No tienes turnos programados</h3>
+                        <p className="text-gray-600">Reserva tu primer turno desde la sección "Descubrir Profesionales"</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {myAppointments.map((appointment) => (
+                          <div key={appointment.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-2">
+                                <div className="flex items-center space-x-4">
+                                  <div>
+                                    <h4 className="font-medium text-gray-900">
+                                      {appointment.calendar_info?.business_name}
+                                    </h4>
+                                    <p className="text-sm text-gray-600">
+                                      {appointment.calendar_info?.calendar_name}
+                                    </p>
+                                  </div>
+                                  <Badge variant={
+                                    appointment.status === 'confirmed' ? 'default' :
+                                    appointment.status === 'cancelled' ? 'destructive' : 'secondary'
+                                  }>
+                                    {appointment.status === 'confirmed' ? 'Confirmado' :
+                                     appointment.status === 'cancelled' ? 'Cancelado' : 'Completado'}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="flex items-center space-x-4 text-sm text-gray-500">
+                                  <div className="flex items-center space-x-1">
+                                    <CalendarIcon className="w-4 h-4" />
+                                    <span>{new Date(appointment.appointment_date).toLocaleDateString()}</span>
+                                  </div>
+                                  <div className="flex items-center space-x-1">
+                                    <Clock className="w-4 h-4" />
+                                    <span>{appointment.appointment_time}</span>
+                                  </div>
+                                </div>
+                                
+                                {appointment.notes && (
+                                  <p className="text-sm text-gray-600 italic bg-gray-50 p-2 rounded">
+                                    "{appointment.notes}"
+                                  </p>
+                                )}
+                              </div>
+                              
+                              <div className="flex flex-col space-y-2">
+                                {appointment.calendar_info?.url_slug && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => window.open(`/c/${appointment.calendar_info.url_slug}`, '_blank')}
+                                  >
+                                    Ver Calendario
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => deleteAppointment(appointment.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
         )}
