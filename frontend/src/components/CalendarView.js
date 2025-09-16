@@ -74,51 +74,62 @@ const CalendarView = () => {
       alert('¡Configuración guardada exitosamente!');
     } catch (error) {
       console.error('Error updating settings:', error);
-      alert('Error al guardar la configuración');
+      alert('Error al guardar la configuración: ' + (error.response?.data?.detail || 'Error desconocido'));
     } finally {
       setSaving(false);
     }
   };
 
-  const updateWorkingHours = (dayIndex, field, value) => {
+  const updateWorkingHours = (dayIndex, timeRanges) => {
     const newSettings = { ...settings };
     if (!newSettings.working_hours) {
       newSettings.working_hours = [];
     }
     
-    const existingDay = newSettings.working_hours.find(wh => wh.day_of_week === dayIndex);
-    if (existingDay) {
-      existingDay[field] = value;
+    const existingDayIndex = newSettings.working_hours.findIndex(wh => wh.day_of_week === dayIndex);
+    const dayData = {
+      day_of_week: dayIndex,
+      time_ranges: timeRanges
+    };
+    
+    if (existingDayIndex >= 0) {
+      newSettings.working_hours[existingDayIndex] = dayData;
     } else {
-      newSettings.working_hours.push({
-        day_of_week: dayIndex,
-        start_time: field === 'start_time' ? value : '09:00',
-        end_time: field === 'end_time' ? value : '17:00'
-      });
+      newSettings.working_hours.push(dayData);
     }
     
     setSettings(newSettings);
   };
 
-  const toggleBlockedDay = (dayIndex) => {
-    const newSettings = { ...settings };
-    if (!newSettings.blocked_days) {
-      newSettings.blocked_days = [];
-    }
-    
-    if (newSettings.blocked_days.includes(dayIndex)) {
-      newSettings.blocked_days = newSettings.blocked_days.filter(d => d !== dayIndex);
-    } else {
-      newSettings.blocked_days.push(dayIndex);
-    }
-    
-    setSettings(newSettings);
+  const addTimeRange = (dayIndex) => {
+    const workingHours = getWorkingHours(dayIndex);
+    const newTimeRanges = [...workingHours.time_ranges, { start_time: '09:00', end_time: '17:00' }];
+    updateWorkingHours(dayIndex, newTimeRanges);
+  };
+
+  const removeTimeRange = (dayIndex, rangeIndex) => {
+    const workingHours = getWorkingHours(dayIndex);
+    const newTimeRanges = workingHours.time_ranges.filter((_, index) => index !== rangeIndex);
+    updateWorkingHours(dayIndex, newTimeRanges);
+  };
+
+  const updateTimeRange = (dayIndex, rangeIndex, field, value) => {
+    const workingHours = getWorkingHours(dayIndex);
+    const newTimeRanges = [...workingHours.time_ranges];
+    newTimeRanges[rangeIndex] = { ...newTimeRanges[rangeIndex], [field]: value };
+    updateWorkingHours(dayIndex, newTimeRanges);
   };
 
   const addBlockedDate = () => {
     const dateInput = document.getElementById('blocked-date-input');
     const date = dateInput.value;
     if (date) {
+      const today = new Date().toISOString().split('T')[0];
+      if (date < today) {
+        alert('No puedes bloquear fechas pasadas');
+        return;
+      }
+      
       const newSettings = { ...settings };
       if (!newSettings.blocked_dates) {
         newSettings.blocked_dates = [];
@@ -137,10 +148,94 @@ const CalendarView = () => {
     setSettings(newSettings);
   };
 
+  const addSpecificDateHours = () => {
+    const dateInput = document.getElementById('specific-date-input');
+    const date = dateInput.value;
+    if (date) {
+      const today = new Date().toISOString().split('T')[0];
+      if (date < today) {
+        alert('No puedes configurar horarios para fechas pasadas');
+        return;
+      }
+      
+      const newSettings = { ...settings };
+      if (!newSettings.specific_date_hours) {
+        newSettings.specific_date_hours = [];
+      }
+      
+      const existingIndex = newSettings.specific_date_hours.findIndex(sd => sd.date === date);
+      if (existingIndex === -1) {
+        newSettings.specific_date_hours.push({
+          date,
+          time_ranges: [{ start_time: '09:00', end_time: '17:00' }]
+        });
+        setSettings(newSettings);
+      }
+      dateInput.value = '';
+    }
+  };
+
+  const removeSpecificDate = (date) => {
+    const newSettings = { ...settings };
+    newSettings.specific_date_hours = newSettings.specific_date_hours.filter(sd => sd.date !== date);
+    setSettings(newSettings);
+  };
+
+  const updateSpecificDateTimeRange = (date, rangeIndex, field, value) => {
+    const newSettings = { ...settings };
+    const dateIndex = newSettings.specific_date_hours.findIndex(sd => sd.date === date);
+    if (dateIndex >= 0) {
+      newSettings.specific_date_hours[dateIndex].time_ranges[rangeIndex] = {
+        ...newSettings.specific_date_hours[dateIndex].time_ranges[rangeIndex],
+        [field]: value
+      };
+      setSettings(newSettings);
+    }
+  };
+
+  const addSpecificDateTimeRange = (date) => {
+    const newSettings = { ...settings };
+    const dateIndex = newSettings.specific_date_hours.findIndex(sd => sd.date === date);
+    if (dateIndex >= 0) {
+      newSettings.specific_date_hours[dateIndex].time_ranges.push({
+        start_time: '09:00',
+        end_time: '17:00'
+      });
+      setSettings(newSettings);
+    }
+  };
+
+  const removeSpecificDateTimeRange = (date, rangeIndex) => {
+    const newSettings = { ...settings };
+    const dateIndex = newSettings.specific_date_hours.findIndex(sd => sd.date === date);
+    if (dateIndex >= 0) {
+      newSettings.specific_date_hours[dateIndex].time_ranges = 
+        newSettings.specific_date_hours[dateIndex].time_ranges.filter((_, index) => index !== rangeIndex);
+      setSettings(newSettings);
+    }
+  };
+
   const getWorkingHours = (dayIndex) => {
-    if (!settings?.working_hours) return { start_time: '09:00', end_time: '17:00' };
+    if (!settings?.working_hours) return { time_ranges: [] };
     const dayHours = settings.working_hours.find(wh => wh.day_of_week === dayIndex);
-    return dayHours || { start_time: '09:00', end_time: '17:00' };
+    return dayHours || { time_ranges: [] };
+  };
+
+  const isBlocked = (type, dayIndex) => {
+    if (!settings) return false;
+    if (type === 'saturday') return settings.blocked_saturdays;
+    if (type === 'sunday') return settings.blocked_sundays;
+    return false;
+  };
+
+  const toggleBlockedWeekend = (type) => {
+    const newSettings = { ...settings };
+    if (type === 'saturday') {
+      newSettings.blocked_saturdays = !newSettings.blocked_saturdays;
+    } else if (type === 'sunday') {
+      newSettings.blocked_sundays = !newSettings.blocked_sundays;
+    }
+    setSettings(newSettings);
   };
 
   if (loading) {
@@ -195,7 +290,7 @@ const CalendarView = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="settings" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="settings" className="flex items-center space-x-2">
               <Settings className="w-4 h-4" />
               <span>Configuración</span>
@@ -203,6 +298,10 @@ const CalendarView = () => {
             <TabsTrigger value="schedule" className="flex items-center space-x-2">
               <Clock className="w-4 h-4" />
               <span>Horarios</span>
+            </TabsTrigger>
+            <TabsTrigger value="specific" className="flex items-center space-x-2">
+              <CalendarDays className="w-4 h-4" />
+              <span>Fechas Específicas</span>
             </TabsTrigger>
             <TabsTrigger value="appointments" className="flex items-center space-x-2">
               <Users className="w-4 h-4" />
@@ -251,16 +350,30 @@ const CalendarView = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <Label htmlFor="blocked_weekends">Bloquear fines de semana</Label>
-                    <p className="text-sm text-gray-600">Bloquea automáticamente sábados y domingos</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <Label htmlFor="blocked_saturdays">Bloquear sábados</Label>
+                      <p className="text-sm text-gray-600">Bloquea automáticamente todos los sábados</p>
+                    </div>
+                    <Switch
+                      id="blocked_saturdays"
+                      checked={isBlocked('saturday')}
+                      onCheckedChange={() => toggleBlockedWeekend('saturday')}
+                    />
                   </div>
-                  <Switch
-                    id="blocked_weekends"
-                    checked={settings?.blocked_weekends || false}
-                    onCheckedChange={(checked) => setSettings({...settings, blocked_weekends: checked})}
-                  />
+
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <Label htmlFor="blocked_sundays">Bloquear domingos</Label>
+                      <p className="text-sm text-gray-600">Bloquea automáticamente todos los domingos</p>
+                    </div>
+                    <Switch
+                      id="blocked_sundays"
+                      checked={isBlocked('sunday')}
+                      onCheckedChange={() => toggleBlockedWeekend('sunday')}
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -270,6 +383,7 @@ const CalendarView = () => {
                       id="blocked-date-input"
                       type="date"
                       className="flex-1"
+                      min={new Date().toISOString().split('T')[0]}
                     />
                     <Button onClick={addBlockedDate} variant="outline">
                       <Plus className="w-4 h-4" />
@@ -305,57 +419,67 @@ const CalendarView = () => {
           <TabsContent value="schedule">
             <Card>
               <CardHeader>
-                <CardTitle>Horarios de Trabajo</CardTitle>
+                <CardTitle>Horarios de Trabajo Semanales</CardTitle>
                 <CardDescription>
-                  Configura tus horarios para cada día de la semana
+                  Configura tus horarios normales para cada día de la semana
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {daysOfWeek.map((day, index) => {
                     const workingHours = getWorkingHours(index);
-                    const isBlocked = settings?.blocked_days?.includes(index);
                     
                     return (
-                      <div key={index} className="flex items-center space-x-4 p-4 border rounded-lg">
-                        <div className="w-24">
-                          <Label className="font-medium">{day}</Label>
+                      <div key={index} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-medium text-lg">{day}</h4>
+                          <Button
+                            onClick={() => addTimeRange(index)}
+                            size="sm"
+                            variant="outline"
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Agregar Horario
+                          </Button>
                         </div>
                         
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            checked={!isBlocked}
-                            onCheckedChange={() => toggleBlockedDay(index)}
-                          />
-                          <span className="text-sm text-gray-600">
-                            {isBlocked ? 'Bloqueado' : 'Disponible'}
-                          </span>
-                        </div>
-                        
-                        {!isBlocked && (
-                          <>
-                            <div className="flex items-center space-x-2">
-                              <Label htmlFor={`start-${index}`} className="text-sm">Desde:</Label>
-                              <Input
-                                id={`start-${index}`}
-                                type="time"
-                                value={workingHours.start_time}
-                                onChange={(e) => updateWorkingHours(index, 'start_time', e.target.value)}
-                                className="w-32"
-                              />
-                            </div>
-                            
-                            <div className="flex items-center space-x-2">
-                              <Label htmlFor={`end-${index}`} className="text-sm">Hasta:</Label>
-                              <Input
-                                id={`end-${index}`}
-                                type="time"
-                                value={workingHours.end_time}
-                                onChange={(e) => updateWorkingHours(index, 'end_time', e.target.value)}
-                                className="w-32"
-                              />
-                            </div>
-                          </>
+                        {workingHours.time_ranges.length === 0 ? (
+                          <p className="text-gray-500 text-sm">Sin horarios configurados</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {workingHours.time_ranges.map((range, rangeIndex) => (
+                              <div key={rangeIndex} className="flex items-center space-x-3 bg-gray-50 p-3 rounded">
+                                <div className="flex items-center space-x-2">
+                                  <Label className="text-sm">Desde:</Label>
+                                  <Input
+                                    type="time"
+                                    value={range.start_time}
+                                    onChange={(e) => updateTimeRange(index, rangeIndex, 'start_time', e.target.value)}
+                                    className="w-32"
+                                  />
+                                </div>
+                                
+                                <div className="flex items-center space-x-2">
+                                  <Label className="text-sm">Hasta:</Label>
+                                  <Input
+                                    type="time"
+                                    value={range.end_time}
+                                    onChange={(e) => updateTimeRange(index, rangeIndex, 'end_time', e.target.value)}
+                                    className="w-32"
+                                  />
+                                </div>
+                                
+                                <Button
+                                  onClick={() => removeTimeRange(index, rangeIndex)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
                     );
@@ -369,6 +493,119 @@ const CalendarView = () => {
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {saving ? 'Guardando...' : 'Guardar Horarios'}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Specific Date Hours */}
+          <TabsContent value="specific">
+            <Card>
+              <CardHeader>
+                <CardTitle>Horarios para Fechas Específicas</CardTitle>
+                <CardDescription>
+                  Configura horarios especiales para días particulares (tienen prioridad sobre los horarios semanales)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                
+                <div>
+                  <Label>Agregar fecha específica</Label>
+                  <div className="flex space-x-2 mt-2">
+                    <Input
+                      id="specific-date-input"
+                      type="date"
+                      className="flex-1"
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                    <Button onClick={addSpecificDateHours} variant="outline">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {settings?.specific_date_hours && settings.specific_date_hours.length > 0 && (
+                  <div className="space-y-6">
+                    {settings.specific_date_hours.map((specificDate) => (
+                      <div key={specificDate.date} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h4 className="font-medium text-lg">
+                              {new Date(specificDate.date).toLocaleDateString('es-AR', { 
+                                weekday: 'long', 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                              })}
+                            </h4>
+                            <p className="text-sm text-gray-600">{specificDate.date}</p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              onClick={() => addSpecificDateTimeRange(specificDate.date)}
+                              size="sm"
+                              variant="outline"
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              Agregar Horario
+                            </Button>
+                            <Button
+                              onClick={() => removeSpecificDate(specificDate.date)}
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {specificDate.time_ranges.map((range, rangeIndex) => (
+                            <div key={rangeIndex} className="flex items-center space-x-3 bg-gray-50 p-3 rounded">
+                              <div className="flex items-center space-x-2">
+                                <Label className="text-sm">Desde:</Label>
+                                <Input
+                                  type="time"
+                                  value={range.start_time}
+                                  onChange={(e) => updateSpecificDateTimeRange(specificDate.date, rangeIndex, 'start_time', e.target.value)}
+                                  className="w-32"
+                                />
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Label className="text-sm">Hasta:</Label>
+                                <Input
+                                  type="time"
+                                  value={range.end_time}
+                                  onChange={(e) => updateSpecificDateTimeRange(specificDate.date, rangeIndex, 'end_time', e.target.value)}
+                                  className="w-32"
+                                />
+                              </div>
+                              
+                              <Button
+                                onClick={() => removeSpecificDateTimeRange(specificDate.date, rangeIndex)}
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <Button 
+                  onClick={handleSettingsUpdate}
+                  disabled={saving}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {saving ? 'Guardando...' : 'Guardar Horarios Específicos'}
                 </Button>
               </CardContent>
             </Card>
@@ -471,13 +708,13 @@ const CalendarView = () => {
 
                 <div className="mt-8 pt-6 border-t">
                   <h4 className="font-medium text-gray-900 mb-4">Estado de Suscripción</h4>
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-yellow-800">
-                      ⚠️ Este calendario necesita una suscripción activa para recibir reservas.
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-green-800 mb-2">
+                      ✅ Suscripción activa hasta: {calendar?.subscription_expires ? new Date(calendar.subscription_expires).toLocaleDateString() : 'N/A'}
                     </p>
-                    <Button className="mt-3 bg-gradient-to-r from-yellow-500 to-orange-500">
-                      Activar Suscripción
-                    </Button>
+                    <p className="text-sm text-green-700">
+                      Tu calendario está funcionando correctamente y puede recibir reservas.
+                    </p>
                   </div>
                 </div>
               </CardContent>
