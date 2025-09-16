@@ -629,7 +629,7 @@ async def get_calendar_appointments(calendar_id: str, current_user: User = Depen
     
     return [Appointment(**parse_from_mongo(apt)) for apt in appointments]
 
-@api_router.get("/appointments/my-appointments", response_model=List[Appointment])
+@api_router.get("/appointments/my-appointments")
 async def get_my_appointments(current_user: User = Depends(get_current_user)):
     """Get all appointments for the current client"""
     if current_user.user_type != "client":
