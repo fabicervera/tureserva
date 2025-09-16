@@ -954,7 +954,7 @@ const Dashboard = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
-                      <Calendar className="w-5 h-5" />
+                      <CalendarIcon className="w-5 h-5" />
                       <span>Mis Turnos</span>
                     </CardTitle>
                     <CardDescription>
