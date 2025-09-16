@@ -822,7 +822,14 @@ class TurnosProAPITester:
         # Appointment tests
         print("\n🕐 Testing Appointments...")
         self.test_create_appointment_requires_friendship()  # NEW: Tests friendship requirement
-        self.test_get_my_appointments()  # NEW FEATURE
+        
+        # Enhanced my-appointments tests (REVIEW REQUEST FOCUS)
+        print("\n📋 Testing Enhanced My-Appointments Endpoint...")
+        self.test_my_appointments_authentication()  # Test auth requirement
+        self.test_my_appointments_client_only()  # Test client-only access
+        self.test_get_my_appointments_enhanced()  # Test enhanced response with professional_info
+        self.test_get_my_appointments_structure()  # Test exact response structure
+        
         self.test_delete_appointment()  # NEW FEATURE
         self.test_get_appointments_employer()
         self.test_get_appointments_client()
