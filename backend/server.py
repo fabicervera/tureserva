@@ -5,7 +5,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 import os
 import logging
 from pathlib import Path
@@ -29,16 +29,26 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "your-secret-key-here")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+# Free license settings
+LICENCE_FREE = int(os.environ.get("LICENCE_FREE", "1"))
+DAY_FREE = int(os.environ.get("DAY_FREE", "30"))
+
 # Create the main app
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-# Models
+# Enhanced Models
+class Location(BaseModel):
+    country: str = "argentina"
+    province: str
+    city: str
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
     full_name: str
     user_type: str = "client"  # "employer" or "client"
+    location: Location
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -49,6 +59,7 @@ class User(BaseModel):
     email: EmailStr
     full_name: str
     user_type: str
+    location: Location
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -63,6 +74,18 @@ class SubscriptionPlan(BaseModel):
     price_ars: int
     description: str
 
+class TimeRange(BaseModel):
+    start_time: str  # HH:MM format
+    end_time: str    # HH:MM format
+
+class WorkingHours(BaseModel):
+    day_of_week: int  # 0=Monday, 6=Sunday
+    time_ranges: List[TimeRange] = []  # Multiple time ranges per day
+
+class SpecificDateHours(BaseModel):
+    date: str  # ISO date string (YYYY-MM-DD)
+    time_ranges: List[TimeRange] = []  # Time ranges for this specific date
+
 class Calendar(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     employer_id: str
@@ -70,6 +93,8 @@ class Calendar(BaseModel):
     business_name: str
     description: str
     url_slug: str
+    category: str = "general"  # For organizing calendars
+    location: Location
     is_active: bool = True
     subscription_expires: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -79,27 +104,25 @@ class CalendarCreate(BaseModel):
     business_name: str
     description: str
     url_slug: str
-
-class WorkingHours(BaseModel):
-    day_of_week: int  # 0=Monday, 6=Sunday
-    start_time: str  # HH:MM format
-    end_time: str    # HH:MM format
+    category: str = "general"
 
 class CalendarSettings(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     calendar_id: str
     working_hours: List[WorkingHours] = []
+    specific_date_hours: List[SpecificDateHours] = []  # Special hours for specific dates
     blocked_dates: List[str] = []  # ISO date strings
-    blocked_weekends: bool = False
-    blocked_days: List[int] = []  # Days of week to block (0-6)
+    blocked_saturdays: bool = False
+    blocked_sundays: bool = False
     appointment_duration: int = 60  # minutes
     buffer_time: int = 0  # minutes between appointments
 
 class CalendarSettingsCreate(BaseModel):
     working_hours: List[WorkingHours] = []
+    specific_date_hours: List[SpecificDateHours] = []
     blocked_dates: List[str] = []
-    blocked_weekends: bool = False
-    blocked_days: List[int] = []
+    blocked_saturdays: bool = False
+    blocked_sundays: bool = False
     appointment_duration: int = 60
     buffer_time: int = 0
 
@@ -130,6 +153,17 @@ class Subscription(BaseModel):
     expires_at: datetime
     mercadopago_payment_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class Friendship(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    employer_id: str
+    status: str = "pending"  # "pending", "accepted", "blocked"
+    requested_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    responded_at: Optional[datetime] = None
+
+class FriendshipRequest(BaseModel):
+    employer_id: str
 
 class MercadoPagoSettings(BaseModel):
     access_token: str
@@ -194,6 +228,22 @@ def parse_from_mongo(item):
                     pass
     return item
 
+def create_free_subscription(employer_id: str, calendar_id: str):
+    """Create a free subscription for new employers"""
+    if LICENCE_FREE:
+        starts_at = datetime.now(timezone.utc)
+        expires_at = starts_at + timedelta(days=DAY_FREE)
+        
+        return Subscription(
+            calendar_id=calendar_id,
+            plan_id="free-trial",
+            employer_id=employer_id,
+            status="active",
+            starts_at=starts_at,
+            expires_at=expires_at
+        )
+    return None
+
 # Initialize subscription plans
 @app.on_event("startup")
 async def startup_event():
@@ -222,13 +272,10 @@ async def register(user_data: UserCreate):
     # Create user
     hashed_password = get_password_hash(user_data.password)
     user_dict = user_data.dict()
+    user_dict["password"] = hashed_password
     user = User(**user_dict)
     
-    # Store user with password in database
-    user_with_password = user.dict()
-    user_with_password["password"] = hashed_password
-    
-    await db.users.insert_one(prepare_for_mongo(user_with_password))
+    await db.users.insert_one(prepare_for_mongo(user.dict()))
     return user
 
 @api_router.post("/auth/login", response_model=Token)
@@ -260,6 +307,7 @@ async def create_calendar(calendar_data: CalendarCreate, current_user: User = De
     
     calendar_dict = calendar_data.dict()
     calendar_dict["employer_id"] = current_user.id
+    calendar_dict["location"] = current_user.location.dict()  # Inherit employer's location
     calendar = Calendar(**calendar_dict)
     
     await db.calendars.insert_one(prepare_for_mongo(calendar.dict()))
@@ -268,15 +316,64 @@ async def create_calendar(calendar_data: CalendarCreate, current_user: User = De
     settings = CalendarSettings(calendar_id=calendar.id)
     await db.calendar_settings.insert_one(prepare_for_mongo(settings.dict()))
     
+    # Create free subscription if enabled
+    if LICENCE_FREE:
+        free_sub = create_free_subscription(current_user.id, calendar.id)
+        if free_sub:
+            await db.subscriptions.insert_one(prepare_for_mongo(free_sub.dict()))
+            # Update calendar with subscription expiry
+            calendar.subscription_expires = free_sub.expires_at
+            await db.calendars.update_one(
+                {"id": calendar.id},
+                {"$set": {"subscription_expires": free_sub.expires_at.isoformat()}}
+            )
+    
     return calendar
 
 @api_router.get("/calendars", response_model=List[Calendar])
-async def get_user_calendars(current_user: User = Depends(get_current_user)):
-    if current_user.user_type == "employer":
-        calendars = await db.calendars.find({"employer_id": current_user.id}).to_list(100)
-    else:
-        calendars = await db.calendars.find({"is_active": True}).to_list(100)
+async def get_calendars(
+    current_user: User = Depends(get_current_user),
+    search: Optional[str] = None,
+    category: Optional[str] = None,
+    province: Optional[str] = None,
+    city: Optional[str] = None
+):
+    query = {}
     
+    if current_user.user_type == "employer":
+        query["employer_id"] = current_user.id
+    else:
+        # For clients, show only active calendars with valid subscriptions from their location
+        query["is_active"] = True
+        # Filter by location
+        if not province and not city:
+            # Default to user's location
+            query["location.province"] = current_user.location.province
+            if current_user.location.city:
+                query["location.city"] = current_user.location.city
+        else:
+            if province:
+                query["location.province"] = province
+            if city:
+                query["location.city"] = city
+        
+        # Only show calendars with active subscriptions
+        current_time = datetime.now(timezone.utc).isoformat()
+        query["subscription_expires"] = {"$gte": current_time}
+    
+    # Add search filters
+    if search:
+        search_regex = {"$regex": search, "$options": "i"}
+        query["$or"] = [
+            {"calendar_name": search_regex},
+            {"business_name": search_regex},
+            {"description": search_regex}
+        ]
+    
+    if category:
+        query["category"] = category
+    
+    calendars = await db.calendars.find(query).to_list(100)
     return [Calendar(**parse_from_mongo(cal)) for cal in calendars]
 
 @api_router.get("/calendars/{url_slug}", response_model=Calendar)
@@ -292,6 +389,17 @@ async def update_calendar_settings(calendar_id: str, settings_data: CalendarSett
     calendar = await db.calendars.find_one({"id": calendar_id, "employer_id": current_user.id})
     if not calendar:
         raise HTTPException(status_code=404, detail="Calendar not found or not authorized")
+    
+    # Validate that blocked dates are not in the past
+    today = date.today().isoformat()
+    for blocked_date in settings_data.blocked_dates:
+        if blocked_date < today:
+            raise HTTPException(status_code=400, detail=f"Cannot block past date: {blocked_date}")
+    
+    # Validate specific date hours are not in the past
+    for specific_date in settings_data.specific_date_hours:
+        if specific_date.date < today:
+            raise HTTPException(status_code=400, detail=f"Cannot set hours for past date: {specific_date.date}")
     
     settings_dict = settings_data.dict()
     settings_dict["calendar_id"] = calendar_id
@@ -310,11 +418,87 @@ async def get_calendar_settings(calendar_id: str):
         # Return default settings
         default_settings = CalendarSettings(calendar_id=calendar_id)
         return default_settings.dict()
+    return settings
+
+# Friendship system
+@api_router.post("/friendships/request")
+async def request_friendship(request_data: FriendshipRequest, current_user: User = Depends(get_current_user)):
+    if current_user.user_type != "client":
+        raise HTTPException(status_code=403, detail="Only clients can request friendships")
     
-    # Remove MongoDB's _id field and parse from mongo
-    if "_id" in settings:
-        del settings["_id"]
-    return parse_from_mongo(settings)
+    # Check if employer exists
+    employer = await db.users.find_one({"id": request_data.employer_id, "user_type": "employer"})
+    if not employer:
+        raise HTTPException(status_code=404, detail="Employer not found")
+    
+    # Check if friendship already exists
+    existing = await db.friendships.find_one({
+        "client_id": current_user.id,
+        "employer_id": request_data.employer_id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Friendship request already exists")
+    
+    friendship = Friendship(
+        client_id=current_user.id,
+        employer_id=request_data.employer_id
+    )
+    
+    await db.friendships.insert_one(prepare_for_mongo(friendship.dict()))
+    return {"message": "Friendship request sent successfully"}
+
+@api_router.get("/friendships/requests")
+async def get_friendship_requests(current_user: User = Depends(get_current_user)):
+    if current_user.user_type != "employer":
+        raise HTTPException(status_code=403, detail="Only employers can view friendship requests")
+    
+    requests = await db.friendships.find({
+        "employer_id": current_user.id,
+        "status": "pending"
+    }).to_list(100)
+    
+    # Get client info for each request
+    result = []
+    for req in requests:
+        client = await db.users.find_one({"id": req["client_id"]})
+        if client:
+            result.append({
+                "id": req["id"],
+                "client": {
+                    "id": client["id"],
+                    "full_name": client["full_name"],
+                    "email": client["email"],
+                    "location": client["location"]
+                },
+                "requested_at": req["requested_at"]
+            })
+    
+    return result
+
+@api_router.post("/friendships/{friendship_id}/respond")
+async def respond_to_friendship(friendship_id: str, accept: bool, current_user: User = Depends(get_current_user)):
+    if current_user.user_type != "employer":
+        raise HTTPException(status_code=403, detail="Only employers can respond to friendship requests")
+    
+    friendship = await db.friendships.find_one({
+        "id": friendship_id,
+        "employer_id": current_user.id,
+        "status": "pending"
+    })
+    
+    if not friendship:
+        raise HTTPException(status_code=404, detail="Friendship request not found")
+    
+    new_status = "accepted" if accept else "blocked"
+    await db.friendships.update_one(
+        {"id": friendship_id},
+        {"$set": {
+            "status": new_status,
+            "responded_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": f"Friendship request {'accepted' if accept else 'rejected'}"}
 
 # Appointments routes
 @api_router.post("/calendars/{calendar_id}/appointments", response_model=Appointment)
@@ -322,6 +506,16 @@ async def create_appointment(calendar_id: str, appointment_data: AppointmentCrea
     calendar = await db.calendars.find_one({"id": calendar_id, "is_active": True})
     if not calendar:
         raise HTTPException(status_code=404, detail="Calendar not found")
+    
+    # Check if friendship exists (client-employer relationship)
+    if current_user.user_type == "client":
+        friendship = await db.friendships.find_one({
+            "client_id": current_user.id,
+            "employer_id": calendar["employer_id"],
+            "status": "accepted"
+        })
+        if not friendship:
+            raise HTTPException(status_code=403, detail="You need to be accepted as a friend to book appointments")
     
     # Check if slot is available
     existing = await db.appointments.find_one({
@@ -362,6 +556,98 @@ async def get_calendar_appointments(calendar_id: str, current_user: User = Depen
         }).to_list(1000)
     
     return [Appointment(**parse_from_mongo(apt)) for apt in appointments]
+
+@api_router.get("/calendars/{calendar_id}/available-slots")
+async def get_available_slots(calendar_id: str, date: str):
+    """Get available time slots for a specific date"""
+    calendar = await db.calendars.find_one({"id": calendar_id, "is_active": True})
+    if not calendar:
+        raise HTTPException(status_code=404, detail="Calendar not found")
+    
+    settings = await db.calendar_settings.find_one({"calendar_id": calendar_id})
+    if not settings:
+        return []
+    
+    # Parse the date
+    try:
+        target_date = datetime.fromisoformat(date).date()
+        day_of_week = target_date.weekday()  # 0=Monday, 6=Sunday
+    except:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    # Check if date is blocked
+    if date in settings.get("blocked_dates", []):
+        return []
+    
+    # Check weekend blocks
+    if day_of_week == 5 and settings.get("blocked_saturdays", False):  # Saturday
+        return []
+    if day_of_week == 6 and settings.get("blocked_sundays", False):   # Sunday
+        return []
+    
+    # Get time ranges for this date
+    time_ranges = []
+    
+    # First priority: specific date hours
+    specific_hours = None
+    for spec_date in settings.get("specific_date_hours", []):
+        if spec_date["date"] == date:
+            specific_hours = spec_date["time_ranges"]
+            break
+    
+    if specific_hours:
+        time_ranges = specific_hours
+    else:
+        # Second priority: regular weekly hours
+        for working_hours in settings.get("working_hours", []):
+            if working_hours["day_of_week"] == day_of_week:
+                time_ranges = working_hours.get("time_ranges", [])
+                break
+    
+    if not time_ranges:
+        return []
+    
+    # Generate available slots
+    available_slots = []
+    appointment_duration = settings.get("appointment_duration", 60)
+    buffer_time = settings.get("buffer_time", 0)
+    
+    for time_range in time_ranges:
+        start_time = datetime.strptime(time_range["start_time"], "%H:%M").time()
+        end_time = datetime.strptime(time_range["end_time"], "%H:%M").time()
+        
+        current_time = datetime.combine(target_date, start_time)
+        end_datetime = datetime.combine(target_date, end_time)
+        
+        while current_time + timedelta(minutes=appointment_duration) <= end_datetime:
+            slot_time = current_time.strftime("%H:%M")
+            
+            # Check if slot is already booked
+            existing_appointment = await db.appointments.find_one({
+                "calendar_id": calendar_id,
+                "appointment_date": date,
+                "appointment_time": slot_time,
+                "status": {"$ne": "cancelled"}
+            })
+            
+            if not existing_appointment:
+                available_slots.append(slot_time)
+            
+            current_time += timedelta(minutes=appointment_duration + buffer_time)
+    
+    return sorted(available_slots)
+
+# Location routes
+@api_router.get("/locations")
+async def get_locations():
+    """Get available locations"""
+    try:
+        locations_path = Path(__file__).parent.parent / "frontend" / "src" / "data" / "locations.json"
+        with open(locations_path, 'r', encoding='utf-8') as f:
+            locations = json.load(f)
+        return locations
+    except FileNotFoundError:
+        return {"argentina": {"name": "Argentina", "provinces": {}}}
 
 # Subscription plans routes
 @api_router.get("/subscription-plans", response_model=List[SubscriptionPlan])

@@ -1,0 +1,262 @@
+{
+  "argentina": {
+    "name": "Argentina",
+    "provinces": {
+      "buenos_aires": {
+        "name": "Buenos Aires",
+        "cities": [
+          "La Plata",
+          "Mar del Plata",
+          "Bahía Blanca",
+          "Tandil",
+          "Olavarría",
+          "Pergamino",
+          "Junín",
+          "Mercedes",
+          "San Nicolás",
+          "Campana"
+        ]
+      },
+      "caba": {
+        "name": "Ciudad Autónoma de Buenos Aires",
+        "cities": [
+          "Buenos Aires"
+        ]
+      },
+      "catamarca": {
+        "name": "Catamarca",
+        "cities": [
+          "San Fernando del Valle de Catamarca",
+          "Belén",
+          "Andalgalá",
+          "Tinogasta",
+          "Santa María"
+        ]
+      },
+      "chaco": {
+        "name": "Chaco",
+        "cities": [
+          "Resistencia",
+          "Presidencia Roque Sáenz Peña",
+          "Barranqueras",
+          "Villa Ángela",
+          "Charata",
+          "General José de San Martín",
+          "Quitilipi"
+        ]
+      },
+      "chubut": {
+        "name": "Chubut",
+        "cities": [
+          "Rawson",
+          "Comodoro Rivadavia",
+          "Puerto Madryn",
+          "Trelew",
+          "Esquel",
+          "Dolavon"
+        ]
+      },
+      "cordoba": {
+        "name": "Córdoba",
+        "cities": [
+          "Córdoba",
+          "Villa Carlos Paz",
+          "Río Cuarto",
+          "San Francisco",
+          "Villa María",
+          "Alta Gracia",
+          "Bell Ville"
+        ]
+      },
+      "corrientes": {
+        "name": "Corrientes",
+        "cities": [
+          "Corrientes",
+          "Goya",
+          "Mercedes",
+          "Curuzú Cuatiá",
+          "Paso de los Libres",
+          "Monte Caseros"
+        ]
+      },
+      "entre_rios": {
+        "name": "Entre Ríos",
+        "cities": [
+          "Paraná",
+          "Concordia",
+          "Gualeguaychú",
+          "Concepción del Uruguay",
+          "Victoria",
+          "Villaguay"
+        ]
+      },
+      "formosa": {
+        "name": "Formosa",
+        "cities": [
+          "Formosa",
+          "Clorinda",
+          "Pirané",
+          "El Colorado",
+          "Ingeniero Juárez"
+        ]
+      },
+      "jujuy": {
+        "name": "Jujuy",
+        "cities": [
+          "San Salvador de Jujuy",
+          "Palpalá",
+          "San Pedro",
+          "Libertador General San Martín",
+          "Perico"
+        ]
+      },
+      "la_pampa": {
+        "name": "La Pampa",
+        "cities": [
+          "Santa Rosa",
+          "General Pico",
+          "Toay",
+          "Realicó",
+          "Eduardo Castex"
+        ]
+      },
+      "la_rioja": {
+        "name": "La Rioja",
+        "cities": [
+          "La Rioja",
+          "Chilecito",
+          "Aimogasta",
+          "Chepes",
+          "Chamical"
+        ]
+      },
+      "mendoza": {
+        "name": "Mendoza",
+        "cities": [
+          "Mendoza",
+          "San Rafael",
+          "Godoy Cruz",
+          "Maipú",
+          "Las Heras",
+          "Luján de Cuyo",
+          "Rivadavia"
+        ]
+      },
+      "misiones": {
+        "name": "Misiones",
+        "cities": [
+          "Posadas",
+          "Puerto Iguazú",
+          "Oberá",
+          "Eldorado",
+          "Puerto Rico",
+          "Montecarlo"
+        ]
+      },
+      "neuquen": {
+        "name": "Neuquén",
+        "cities": [
+          "Neuquén",
+          "Cipolletti",
+          "Plottier",
+          "San Martín de los Andes",
+          "Villa La Angostura",
+          "Cutral Có"
+        ]
+      },
+      "rio_negro": {
+        "name": "Río Negro",
+        "cities": [
+          "Viedma",
+          "San Carlos de Bariloche",
+          "General Roca",
+          "Cipolletti",
+          "Villa Regina",
+          "Allen"
+        ]
+      },
+      "salta": {
+        "name": "Salta",
+        "cities": [
+          "Salta",
+          "San Ramón de la Nueva Orán",
+          "Tartagal",
+          "Metán",
+          "Cafayate",
+          "General Güemes"
+        ]
+      },
+      "san_juan": {
+        "name": "San Juan",
+        "cities": [
+          "San Juan",
+          "Chimbas",
+          "Rivadavia",
+          "Santa Lucía",
+          "Rawson",
+          "Pocito"
+        ]
+      },
+      "san_luis": {
+        "name": "San Luis",
+        "cities": [
+          "San Luis",
+          "Villa Mercedes",
+          "Merlo",
+          "Justo Daract",
+          "La Punta"
+        ]
+      },
+      "santa_cruz": {
+        "name": "Santa Cruz",
+        "cities": [
+          "Río Gallegos",
+          "Caleta Olivia",
+          "Puerto Deseado",
+          "El Calafate",
+          "Pico Truncado"
+        ]
+      },
+      "santa_fe": {
+        "name": "Santa Fe",
+        "cities": [
+          "Santa Fe",
+          "Rosario",
+          "Rafaela",
+          "Reconquista",
+          "Venado Tuerto",
+          "Esperanza"
+        ]
+      },
+      "santiago_del_estero": {
+        "name": "Santiago del Estero",
+        "cities": [
+          "Santiago del Estero",
+          "La Banda",
+          "Termas de Río Hondo",
+          "Nueva Esperanza",
+          "Frías"
+        ]
+      },
+      "tierra_del_fuego": {
+        "name": "Tierra del Fuego",
+        "cities": [
+          "Ushuaia",
+          "Río Grande",
+          "Tolhuin"
+        ]
+      },
+      "tucuman": {
+        "name": "Tucumán",
+        "cities": [
+          "Tucumán",
+          "Yerba Buena",
+          "Tafí Viejo",
+          "Banda del Río Salí",
+          "Concepción",
+          "Aguilares"
+        ]
+      }
+    }
+  }
+}
