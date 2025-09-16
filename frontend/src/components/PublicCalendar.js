@@ -9,7 +9,7 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
-import { Calendar as CalendarIcon, Clock, User, MapPin, Phone, Mail, CheckCircle2, UserPlus, Heart, X } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, User, MapPin, CheckCircle2, UserPlus, Heart, X, ArrowLeft, LogIn, UserCheck } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -24,6 +24,7 @@ const PublicCalendar = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [availableSlots, setAvailableSlots] = useState([]);
+  const [dateStates, setDateStates] = useState({});
   const [loading, setLoading] = useState(true);
   const [bookingStep, setBookingStep] = useState('calendar'); // 'calendar', 'login', 'friendship', 'booking', 'success'
   const [appointmentNotes, setAppointmentNotes] = useState('');
@@ -59,6 +60,12 @@ const PublicCalendar = () => {
     }
   }, [selectedDate, calendar]);
 
+  useEffect(() => {
+    if (calendar) {
+      loadDateStates();
+    }
+  }, [calendar, settings]);
+
   const loadCalendarData = async () => {
     try {
       const calendarRes = await axios.get(`${API}/calendars/${urlSlug}`);
@@ -68,7 +75,6 @@ const PublicCalendar = () => {
       setSettings(settingsRes.data);
     } catch (error) {
       console.error('Error loading calendar:', error);
-      // Instead of redirecting, show error state
       setCalendar(null);
       setSettings(null);
     } finally {
@@ -85,6 +91,18 @@ const PublicCalendar = () => {
     }
   };
 
+  const loadDateStates = async () => {
+    if (!calendar) return;
+    
+    try {
+      const today = new Date();
+      const response = await axios.get(`${API}/calendars/${calendar.id}/available-dates?month=${today.getMonth() + 1}&year=${today.getFullYear()}`);
+      setDateStates(response.data);
+    } catch (error) {
+      console.error('Error loading date states:', error);
+    }
+  };
+
   const loadAvailableSlots = async (date) => {
     try {
       const response = await axios.get(`${API}/calendars/${calendar.id}/available-slots?date=${date}`);
@@ -95,51 +113,28 @@ const PublicCalendar = () => {
     }
   };
 
-  const isDateBlocked = (date) => {
-    if (!settings) return false;
-    
+  const getDateState = (date) => {
     const dateString = date.toISOString().split('T')[0];
-    const dayOfWeek = date.getDay();
     
-    // Check if date is specifically blocked
-    if (settings.blocked_dates?.includes(dateString)) return true;
+    if (dateStates.blocked_dates?.includes(dateString)) return 'blocked';
+    if (dateStates.no_slots_dates?.includes(dateString)) return 'no-slots';
+    if (dateStates.available_dates?.includes(dateString)) return 'available';
     
-    // Check weekend blocks
-    if (dayOfWeek === 6 && settings.blocked_saturdays) return true;
-    if (dayOfWeek === 0 && settings.blocked_sundays) return true;
-    
-    return false;
+    return 'unavailable';
   };
 
-  const isDateAvailable = (date) => {
-    if (!settings || !calendar) return false;
-    
+  const isDateSelectable = (date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Can't book past dates
     if (date < today) return false;
     
-    // Check if date is blocked
-    if (isDateBlocked(date)) return false;
-    
-    const dayOfWeek = date.getDay();
-    const dateString = date.toISOString().split('T')[0];
-    
-    // Check if there are specific hours for this date
-    const specificHours = settings.specific_date_hours?.find(sh => sh.date === dateString);
-    if (specificHours) {
-      return specificHours.time_ranges && specificHours.time_ranges.length > 0;
-    }
-    
-    // Check regular working hours
-    const mondayBasedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert Sunday=0 to Monday=0 system
-    const workingDay = settings.working_hours?.find(wh => wh.day_of_week === mondayBasedDay);
-    return workingDay && workingDay.time_ranges && workingDay.time_ranges.length > 0;
+    const state = getDateState(date);
+    return state === 'available';
   };
 
   const handleDateSelect = (date) => {
-    if (!isDateAvailable(date)) return;
+    if (!isDateSelectable(date)) return;
     
     setSelectedDate(date);
     setSelectedTime(null);
@@ -150,14 +145,12 @@ const PublicCalendar = () => {
     if (!user) {
       setBookingStep('login');
     } else {
-      // Check if friendship exists
       checkFriendshipAndProceed();
     }
   };
 
   const checkFriendshipAndProceed = async () => {
     try {
-      // Try to create appointment directly - if friendship doesn't exist, it will fail
       setBookingStep('booking');
     } catch (error) {
       if (error.response?.status === 403) {
@@ -189,10 +182,11 @@ const PublicCalendar = () => {
       try {
         const response = await axios.post(`${API}/auth/register`, registerData);
         if (response.status === 200) {
-          // Now login
           const loginResult = await login(registerData.email, registerData.password);
           if (loginResult.success) {
-            checkFriendshipAndProceed();
+            setBookingStep('calendar');
+            // Refresh page to show logged in state
+            window.location.reload();
           } else {
             setAuthError(loginResult.error);
           }
@@ -203,7 +197,9 @@ const PublicCalendar = () => {
     } else {
       const result = await login(loginData.email, loginData.password);
       if (result.success) {
-        checkFriendshipAndProceed();
+        setBookingStep('calendar');
+        // Refresh page to show logged in state
+        window.location.reload();
       } else {
         setAuthError(result.error);
       }
@@ -237,7 +233,6 @@ const PublicCalendar = () => {
     const currentYear = today.getFullYear();
     
     const firstDay = new Date(currentYear, currentMonth, 1);
-    const lastDay = new Date(currentYear, currentMonth + 1, 0);
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
     
@@ -249,34 +244,47 @@ const PublicCalendar = () => {
       const isCurrentMonth = date.getMonth() === currentMonth;
       const isToday = date.toDateString() === today.toDateString();
       const isPast = date < today && !isToday;
-      const isBlocked = isDateBlocked(date);
-      const isAvailable = isDateAvailable(date);
+      const dateState = getDateState(date);
+      const isSelectable = isDateSelectable(date);
       
       let cellClass = `
         h-12 flex items-center justify-center text-sm cursor-pointer transition-all relative
         ${isCurrentMonth ? 'text-gray-900' : 'text-gray-300'}
         ${isToday ? 'bg-indigo-100 text-indigo-700 font-bold' : ''}
         ${isPast ? 'text-gray-400 cursor-not-allowed' : ''}
-        ${isBlocked ? 'bg-red-100 text-red-500 cursor-not-allowed' : ''}
-        ${isAvailable && !isBlocked && !isPast ? 'hover:bg-indigo-50 border-2 border-transparent hover:border-indigo-200' : ''}
         ${selectedDate?.toDateString() === date.toDateString() ? 'bg-indigo-600 text-white' : ''}
       `;
+      
+      // Apply state-specific styling
+      if (dateState === 'blocked') {
+        cellClass += ' bg-red-100 text-red-500 cursor-not-allowed';
+      } else if (dateState === 'no-slots') {
+        cellClass += ' bg-yellow-100 text-yellow-700 cursor-not-allowed';
+      } else if (dateState === 'available' && !isPast) {
+        cellClass += ' hover:bg-indigo-50 border-2 border-transparent hover:border-indigo-200';
+      }
+      
+      const getTooltip = () => {
+        if (isPast) return 'Fecha pasada';
+        if (dateState === 'blocked') return 'Fecha bloqueada';
+        if (dateState === 'no-slots') return 'Sin horarios disponibles';
+        if (dateState === 'available') return 'Hacer clic para seleccionar';
+        return 'Sin horarios configurados';
+      };
       
       days.push(
         <div
           key={i}
           className={cellClass}
-          onClick={() => handleDateSelect(date)}
-          title={
-            isBlocked ? 'Fecha bloqueada' :
-            isPast ? 'Fecha pasada' :
-            !isAvailable ? 'Sin horarios disponibles' :
-            'Hacer clic para seleccionar'
-          }
+          onClick={() => isSelectable && handleDateSelect(date)}
+          title={getTooltip()}
         >
           {date.getDate()}
-          {isBlocked && (
+          {dateState === 'blocked' && (
             <X className="w-3 h-3 absolute top-1 right-1 text-red-500" />
+          )}
+          {dateState === 'no-slots' && (
+            <Clock className="w-3 h-3 absolute top-1 right-1 text-yellow-600" />
           )}
         </div>
       );
@@ -317,10 +325,23 @@ const PublicCalendar = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 relative">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center space-x-4 mb-4">
+            {user && (
+              <Button
+                variant="outline"
+                onClick={() => navigate('/dashboard')}
+                className="flex items-center space-x-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Volver a Mis Servicios</span>
+              </Button>
+            )}
+          </div>
+          
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold text-gray-900">{calendar.business_name}</h1>
             <p className="text-lg text-gray-600">{calendar.calendar_name}</p>
@@ -339,7 +360,37 @@ const PublicCalendar = () => {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
+        
+        {/* Blur Overlay for Non-Logged Users */}
+        {!user && bookingStep === 'calendar' && (
+          <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+            <Card className="w-full max-w-md mx-4 shadow-2xl">
+              <CardHeader className="text-center">
+                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <UserCheck className="w-8 h-8 text-indigo-600" />
+                </div>
+                <CardTitle className="text-2xl text-gray-900">Iniciar Sesión Requerido</CardTitle>
+                <CardDescription>
+                  Para reservar un turno con {calendar.business_name}, necesitas iniciar sesión o crear una cuenta
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button
+                  onClick={() => setBookingStep('login')}
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 h-12"
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Iniciar Sesión / Registrarse
+                </Button>
+                <p className="text-center text-sm text-gray-500">
+                  Una vez que inicies sesión, podrás solicitar acceso a este profesional y reservar turnos
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {bookingStep === 'calendar' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Calendar */}
@@ -382,8 +433,14 @@ const PublicCalendar = () => {
                       <span>Fechas bloqueadas</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-gray-100 border border-gray-200 rounded"></div>
+                      <div className="w-3 h-3 bg-yellow-100 border border-yellow-200 rounded relative">
+                        <Clock className="w-2 h-2 absolute inset-0 m-auto text-yellow-600" />
+                      </div>
                       <span>Sin horarios disponibles</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-gray-100 border border-gray-200 rounded"></div>
+                      <span>Sin horarios configurados</span>
                     </div>
                   </div>
                 </div>
@@ -450,9 +507,9 @@ const PublicCalendar = () => {
         {bookingStep === 'login' && (
           <Card className="max-w-md mx-auto">
             <CardHeader>
-              <CardTitle>Iniciar sesión</CardTitle>
+              <CardTitle>Acceso Requerido</CardTitle>
               <CardDescription>
-                Para reservar tu turno necesitas iniciar sesión o crear una cuenta
+                Para reservar tu turno con {calendar.business_name}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -559,7 +616,7 @@ const PublicCalendar = () => {
                 </div>
 
                 <Button type="submit" className="w-full bg-gradient-to-r from-indigo-600 to-purple-600">
-                  {isRegistering ? 'Crear cuenta y reservar' : 'Iniciar sesión'}
+                  {isRegistering ? 'Crear cuenta y continuar' : 'Iniciar sesión'}
                 </Button>
 
                 <Button
@@ -577,7 +634,7 @@ const PublicCalendar = () => {
                   onClick={() => setBookingStep('calendar')}
                   className="w-full"
                 >
-                  Volver al calendario
+                  Cancelar
                 </Button>
               </form>
             </CardContent>
@@ -592,7 +649,7 @@ const PublicCalendar = () => {
                 <span>Solicitud de Acceso</span>
               </CardTitle>
               <CardDescription>
-                Necesitas ser autorizado por el profesional para reservar turnos
+                Necesitas ser autorizado por {calendar.business_name} para reservar turnos
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -635,10 +692,10 @@ const PublicCalendar = () => {
               
               <Button
                 variant="outline"
-                onClick={() => setBookingStep('calendar')}
+                onClick={() => navigate('/dashboard')}
                 className="w-full"
               >
-                Volver al calendario
+                Volver a Mis Servicios
               </Button>
             </CardContent>
           </Card>
@@ -720,7 +777,7 @@ const PublicCalendar = () => {
                 onClick={() => navigate('/dashboard')}
                 className="bg-gradient-to-r from-indigo-600 to-purple-600"
               >
-                Ir a mi dashboard
+                Volver a Mis Servicios
               </Button>
             </CardContent>
           </Card>
