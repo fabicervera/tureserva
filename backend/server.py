@@ -648,6 +648,10 @@ async def get_my_appointments(current_user: User = Depends(get_current_user)):
             professional = await db.users.find_one({"id": calendar["employer_id"]})
             
             apt_dict = parse_from_mongo(apt)
+            # Remove MongoDB ObjectId if present
+            if '_id' in apt_dict:
+                del apt_dict['_id']
+                
             apt_dict["calendar_info"] = {
                 "business_name": calendar.get("business_name", ""),
                 "calendar_name": calendar.get("calendar_name", ""),
