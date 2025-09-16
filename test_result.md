@@ -106,41 +106,50 @@ user_problem_statement: "En la cuenta de clientes, la sección de Mis Turnos no 
 
 backend:
   - task: "Modificar endpoint /appointments/my-appointments para incluir información del profesional"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Task identificada - necesita agregar información del profesional (employer) al endpoint"
+        - working: "NA"
+          agent: "main"
+          comment: "IMPLEMENTADO: Se agregó consulta a tabla users para obtener información del profesional y se incluye en professional_info con full_name y email"
 
 frontend:
   - task: "Implementar buscador y filtros en sección Mis Turnos"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "Dashboard.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Task identificada - agregar buscador y filtro para mostrar solo turnos futuros por defecto"
+        - working: "NA"
+          agent: "main"
+          comment: "IMPLEMENTADO: Se agregaron estados appointmentSearch, showFutureOnly, filteredAppointments y función filterAppointments que busca por múltiples campos"
 
   - task: "Actualizar UI para mostrar información completa del profesional"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "Dashboard.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Task identificada - mostrar nombre del profesional en la UI"
+        - working: "NA"
+          agent: "main"
+          comment: "IMPLEMENTADO: Se actualizó la UI para mostrar professional_info.full_name, se agregó buscador con icono, checkbox para filtrar turnos futuros, y se mejoró el formato de fechas"
 
 metadata:
   created_by: "main_agent"
