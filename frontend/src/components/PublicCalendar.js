@@ -61,16 +61,16 @@ const PublicCalendar = () => {
 
   const loadCalendarData = async () => {
     try {
-      const [calendarRes, settingsRes] = await Promise.all([
-        axios.get(`${API}/calendars/${urlSlug}`),
-        axios.get(`${API}/calendars/${calendarRes.data.id}/settings`)
-      ]);
+      const calendarRes = await axios.get(`${API}/calendars/${urlSlug}`);
+      const settingsRes = await axios.get(`${API}/calendars/${calendarRes.data.id}/settings`);
 
       setCalendar(calendarRes.data);
       setSettings(settingsRes.data);
     } catch (error) {
       console.error('Error loading calendar:', error);
-      navigate('/');
+      // Instead of redirecting, show error state
+      setCalendar(null);
+      setSettings(null);
     } finally {
       setLoading(false);
     }
