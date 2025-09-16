@@ -80,6 +80,21 @@ const CalendarView = () => {
     }
   };
 
+  const deleteAppointment = async (appointmentId) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este turno?')) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/appointments/${appointmentId}`);
+      alert('Turno eliminado exitosamente');
+      loadCalendarData(); // Reload data
+    } catch (error) {
+      console.error('Error deleting appointment:', error);
+      alert('Error al eliminar turno: ' + (error.response?.data?.detail || 'Error desconocido'));
+    }
+  };
+
   const updateWorkingHours = (dayIndex, timeRanges) => {
     const newSettings = { ...settings };
     if (!newSettings.working_hours) {
