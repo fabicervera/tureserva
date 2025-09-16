@@ -625,7 +625,7 @@ const Dashboard = () => {
                         <SelectValue placeholder="Todas" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todas las categorías</SelectItem>
+                        <SelectItem value="all">Todas las categorías</SelectItem>
                         {categories.map((cat) => (
                           <SelectItem key={cat.value} value={cat.value}>
                             {cat.label}
