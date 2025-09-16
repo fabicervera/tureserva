@@ -665,7 +665,7 @@ const Dashboard = () => {
                         <SelectValue placeholder="Tu ciudad" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todas las ciudades</SelectItem>
+                        <SelectItem value="all">Todas las ciudades</SelectItem>
                         {getAvailableCities().map((city) => (
                           <SelectItem key={city} value={city}>
                             {city}
