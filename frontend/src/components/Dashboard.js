@@ -444,7 +444,7 @@ const Dashboard = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
-                      <Calendar className="w-6 h-6 text-indigo-600" />
+                      <CalendarIcon className="w-6 h-6 text-indigo-600" />
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">Calendarios</p>
