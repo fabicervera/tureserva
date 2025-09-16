@@ -410,7 +410,8 @@ class TurnosProAPITester:
             return False
             
         # Accept the friendship
-        success, status, response = self.make_request('POST', f'friendships/{self.friendship_id}/respond?accept=true', token=self.employer_token, expected_status=200)
+        response_data = {"accept": True}
+        success, status, response = self.make_request('POST', f'friendships/{self.friendship_id}/respond', response_data, token=self.employer_token, expected_status=200)
         
         if success:
             self.log_test("Respond to Friendship", True)
