@@ -373,7 +373,7 @@ async def get_calendars(
             {"description": search_regex}
         ]
     
-    if category:
+    if category and category != 'all':
         query["category"] = category
     
     calendars = await db.calendars.find(query).to_list(100)
