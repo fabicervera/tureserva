@@ -233,20 +233,68 @@ class TurnosProAPITester:
             self.log_test("Get Calendar by Slug", False, f"Status: {status}, Response: {response}")
             return False
 
-    def test_update_calendar_settings(self):
-        """Test updating calendar settings"""
+    def test_get_locations(self):
+        """Test getting locations (NEW FEATURE)"""
+        success, status, response = self.make_request('GET', 'locations', expected_status=200)
+        
+        if success and 'argentina' in response:
+            self.log_test("Get Locations", True)
+            return True
+        else:
+            self.log_test("Get Locations", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_create_calendar_with_free_subscription(self):
+        """Test calendar creation creates free subscription automatically (NEW FEATURE)"""
+        if not self.employer_token:
+            self.log_test("Create Calendar with Free Subscription", False, "No employer token available")
+            return False
+            
+        calendar_slug = f"test-calendar-{uuid.uuid4().hex[:8]}"
+        calendar_data = {
+            "calendar_name": "Test Calendar",
+            "business_name": "Test Business",
+            "description": "A test calendar for automated testing",
+            "url_slug": calendar_slug,
+            "category": "medical"
+        }
+        
+        success, status, response = self.make_request('POST', 'calendars', calendar_data, token=self.employer_token, expected_status=200)
+        
+        if success and response.get('subscription_expires'):
+            self.calendar_id = response.get('id')
+            self.calendar_slug = calendar_slug
+            self.log_test("Create Calendar with Free Subscription", True)
+            return True
+        else:
+            self.log_test("Create Calendar with Free Subscription", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_update_calendar_settings_partial_hours(self):
+        """Test updating calendar settings with partial hours (NEW FEATURE)"""
         if not self.calendar_id or not self.employer_token:
-            self.log_test("Update Calendar Settings", False, "Missing calendar ID or employer token")
+            self.log_test("Update Calendar Settings - Partial Hours", False, "Missing calendar ID or employer token")
             return False
             
         settings_data = {
             "working_hours": [
-                {"day_of_week": 1, "start_time": "09:00", "end_time": "17:00"},
-                {"day_of_week": 2, "start_time": "09:00", "end_time": "17:00"}
+                {
+                    "day_of_week": 1,  # Tuesday
+                    "time_ranges": [
+                        {"start_time": "09:00", "end_time": "13:00"},
+                        {"start_time": "16:00", "end_time": "20:00"}
+                    ]
+                },
+                {
+                    "day_of_week": 2,  # Wednesday
+                    "time_ranges": [
+                        {"start_time": "10:00", "end_time": "14:00"}
+                    ]
+                }
             ],
             "blocked_dates": [],
-            "blocked_weekends": True,
-            "blocked_days": [0, 6],
+            "blocked_saturdays": True,
+            "blocked_sundays": True,
             "appointment_duration": 60,
             "buffer_time": 15
         }
@@ -254,10 +302,173 @@ class TurnosProAPITester:
         success, status, response = self.make_request('PUT', f'calendars/{self.calendar_id}/settings', settings_data, token=self.employer_token, expected_status=200)
         
         if success:
-            self.log_test("Update Calendar Settings", True)
+            self.log_test("Update Calendar Settings - Partial Hours", True)
             return True
         else:
-            self.log_test("Update Calendar Settings", False, f"Status: {status}, Response: {response}")
+            self.log_test("Update Calendar Settings - Partial Hours", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_update_calendar_settings_specific_dates(self):
+        """Test updating calendar settings with specific date hours (NEW FEATURE)"""
+        if not self.calendar_id or not self.employer_token:
+            self.log_test("Update Calendar Settings - Specific Dates", False, "Missing calendar ID or employer token")
+            return False
+            
+        # Use future dates for testing
+        future_date1 = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
+        future_date2 = (datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d')
+        
+        settings_data = {
+            "working_hours": [
+                {
+                    "day_of_week": 1,
+                    "time_ranges": [{"start_time": "09:00", "end_time": "17:00"}]
+                }
+            ],
+            "specific_date_hours": [
+                {
+                    "date": future_date1,
+                    "time_ranges": [
+                        {"start_time": "08:00", "end_time": "12:00"},
+                        {"start_time": "14:00", "end_time": "18:00"}
+                    ]
+                },
+                {
+                    "date": future_date2,
+                    "time_ranges": [
+                        {"start_time": "10:00", "end_time": "16:00"}
+                    ]
+                }
+            ],
+            "blocked_dates": [],
+            "blocked_saturdays": False,
+            "blocked_sundays": False,
+            "appointment_duration": 60,
+            "buffer_time": 0
+        }
+        
+        success, status, response = self.make_request('PUT', f'calendars/{self.calendar_id}/settings', settings_data, token=self.employer_token, expected_status=200)
+        
+        if success:
+            self.log_test("Update Calendar Settings - Specific Dates", True)
+            return True
+        else:
+            self.log_test("Update Calendar Settings - Specific Dates", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_blocked_dates_validation(self):
+        """Test that past dates cannot be blocked (NEW FEATURE)"""
+        if not self.calendar_id or not self.employer_token:
+            self.log_test("Blocked Dates Validation", False, "Missing calendar ID or employer token")
+            return False
+            
+        # Try to block a past date
+        past_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        
+        settings_data = {
+            "working_hours": [],
+            "specific_date_hours": [],
+            "blocked_dates": [past_date],
+            "blocked_saturdays": False,
+            "blocked_sundays": False,
+            "appointment_duration": 60,
+            "buffer_time": 0
+        }
+        
+        success, status, response = self.make_request('PUT', f'calendars/{self.calendar_id}/settings', settings_data, token=self.employer_token, expected_status=400)
+        
+        if success:  # Should fail with 400
+            self.log_test("Blocked Dates Validation", True)
+            return True
+        else:
+            self.log_test("Blocked Dates Validation", False, f"Expected 400, got {status}: {response}")
+            return False
+
+    def test_request_friendship(self):
+        """Test friendship request (NEW FEATURE)"""
+        if not self.client_token or not self.employer_user:
+            self.log_test("Request Friendship", False, "Missing client token or employer user")
+            return False
+            
+        friendship_data = {
+            "employer_id": self.employer_user["id"]
+        }
+        
+        success, status, response = self.make_request('POST', 'friendships/request', friendship_data, token=self.client_token, expected_status=200)
+        
+        if success:
+            self.log_test("Request Friendship", True)
+            return True
+        else:
+            self.log_test("Request Friendship", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_get_friendship_requests(self):
+        """Test getting friendship requests (NEW FEATURE)"""
+        if not self.employer_token:
+            self.log_test("Get Friendship Requests", False, "No employer token available")
+            return False
+            
+        success, status, response = self.make_request('GET', 'friendships/requests', token=self.employer_token, expected_status=200)
+        
+        if success and isinstance(response, list):
+            # Store friendship ID for later use
+            if len(response) > 0:
+                self.friendship_id = response[0].get('id')
+            self.log_test("Get Friendship Requests", True)
+            return True
+        else:
+            self.log_test("Get Friendship Requests", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_respond_to_friendship(self):
+        """Test responding to friendship request (NEW FEATURE)"""
+        if not self.employer_token or not self.friendship_id:
+            self.log_test("Respond to Friendship", False, "Missing employer token or friendship ID")
+            return False
+            
+        # Accept the friendship
+        success, status, response = self.make_request('POST', f'friendships/{self.friendship_id}/respond?accept=true', token=self.employer_token, expected_status=200)
+        
+        if success:
+            self.log_test("Respond to Friendship", True)
+            return True
+        else:
+            self.log_test("Respond to Friendship", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_get_available_slots(self):
+        """Test getting available slots with priority logic (NEW FEATURE)"""
+        if not self.calendar_id:
+            self.log_test("Get Available Slots", False, "No calendar ID available")
+            return False
+            
+        # Test with a future date
+        future_date = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
+        
+        success, status, response = self.make_request('GET', f'calendars/{self.calendar_id}/available-slots?date={future_date}', expected_status=200)
+        
+        if success and isinstance(response, list):
+            self.log_test("Get Available Slots", True)
+            return True
+        else:
+            self.log_test("Get Available Slots", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_calendars_filter_by_location(self):
+        """Test calendar filtering by location (NEW FEATURE)"""
+        if not self.client_token:
+            self.log_test("Calendar Filter by Location", False, "No client token available")
+            return False
+            
+        # Test filtering by province
+        success, status, response = self.make_request('GET', 'calendars?province=Buenos Aires', token=self.client_token, expected_status=200)
+        
+        if success and isinstance(response, list):
+            self.log_test("Calendar Filter by Location", True)
+            return True
+        else:
+            self.log_test("Calendar Filter by Location", False, f"Status: {status}, Response: {response}")
             return False
 
     def test_get_calendar_settings(self):
