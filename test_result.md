@@ -169,3 +169,5 @@ test_plan:
 agent_communication:
     - agent: "main"
       message: "Iniciando implementación para mejorar sección Mis Turnos - agregar info del profesional, buscador y filtros por fecha"
+    - agent: "main"
+      message: "COMPLETADO: Todas las funcionalidades implementadas. Backend ahora incluye professional_info con nombre del profesional. Frontend tiene buscador por múltiples campos, filtro de turnos futuros/pasados, y UI mejorada que muestra toda la información solicitada. Listo para testing."
