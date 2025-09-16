@@ -75,6 +75,7 @@ const Dashboard = () => {
       loadFriendshipRequests();
     } else if (user?.user_type === 'client') {
       loadMyServices();
+      loadMyAppointments();
     }
   }, []);
 
