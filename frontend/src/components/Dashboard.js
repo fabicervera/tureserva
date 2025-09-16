@@ -138,6 +138,15 @@ const Dashboard = () => {
     }
   };
 
+  const loadMyAppointments = async () => {
+    try {
+      const response = await axios.get(`${API}/appointments/my-appointments`);
+      setMyAppointments(response.data);
+    } catch (error) {
+      console.error('Error loading my appointments:', error);
+    }
+  };
+
   const loadLocations = async () => {
     try {
       const response = await axios.get(`${API}/locations`);
