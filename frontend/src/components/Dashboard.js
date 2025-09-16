@@ -38,6 +38,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [calendars, setCalendars] = useState([]);
   const [myServices, setMyServices] = useState([]);
+  const [myAppointments, setMyAppointments] = useState([]);
   const [subscriptionPlans, setSubscriptionPlans] = useState([]);
   const [friendshipRequests, setFriendshipRequests] = useState([]);
   const [friendshipStatuses, setFriendshipStatuses] = useState({});
