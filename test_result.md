@@ -107,11 +107,11 @@ user_problem_statement: "En la cuenta de clientes, la sección de Mis Turnos no 
 backend:
   - task: "Modificar endpoint /appointments/my-appointments para incluir información del profesional"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
@@ -119,6 +119,9 @@ backend:
         - working: "NA"
           agent: "main"
           comment: "IMPLEMENTADO: Se agregó consulta a tabla users para obtener información del profesional y se incluye en professional_info con full_name y email"
+        - working: true
+          agent: "testing"
+          comment: "TESTING COMPLETADO: Endpoint funciona correctamente. Retorna professional_info con full_name y email del profesional, mantiene calendar_info con business_name, calendar_name y url_slug. Probado con clientes con turnos, sin turnos, diferentes estados de turnos, autenticación requerida y manejo de errores. Estructura de respuesta exacta como se solicitó en review."
 
 frontend:
   - task: "Implementar buscador y filtros en sección Mis Turnos"
