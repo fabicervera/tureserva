@@ -678,69 +678,6 @@ const CalendarView = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
-          {/* Payments */}
-          <TabsContent value="payments">
-            <Card>
-              <CardHeader>
-                <CardTitle>Configuración de MercadoPago</CardTitle>
-                <CardDescription>
-                  Configura tus credenciales de MercadoPago para recibir pagos
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="font-medium text-blue-900 mb-2">¿Cómo obtener las credenciales?</h4>
-                    <ol className="list-decimal list-inside text-sm text-blue-800 space-y-1">
-                      <li>Ingresa a tu cuenta de MercadoPago</li>
-                      <li>Ve a "Desarrolladores" → "Tus integraciones"</li>
-                      <li>Crea una nueva aplicación o selecciona una existente</li>
-                      <li>Copia el Access Token y Public Key</li>
-                    </ol>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label htmlFor="access_token">Access Token</Label>
-                      <Input
-                        id="access_token"
-                        type="password"
-                        placeholder="APP_USR-..."
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="public_key">Public Key</Label>
-                      <Input
-                        id="public_key"
-                        type="text"
-                        placeholder="APP_USR-..."
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-
-                  <Button className="bg-gradient-to-r from-indigo-600 to-purple-600">
-                    <Save className="w-4 h-4 mr-2" />
-                    Guardar Credenciales
-                  </Button>
-                </div>
-
-                <div className="mt-8 pt-6 border-t">
-                  <h4 className="font-medium text-gray-900 mb-4">Estado de Suscripción</h4>
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-800 mb-2">
-                      ✅ Suscripción activa hasta: {calendar?.subscription_expires ? new Date(calendar.subscription_expires).toLocaleDateString() : 'N/A'}
-                    </p>
-                    <p className="text-sm text-green-700">
-                      Tu calendario está funcionando correctamente y puede recibir reservas.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
     </div>
