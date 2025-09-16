@@ -499,28 +499,122 @@ class TurnosProAPITester:
                 self.log_test("Create Appointment Requires Friendship", False, f"Status: {status}, Response: {response}")
                 return False
 
-    def test_get_my_appointments(self):
-        """Test GET /api/appointments/my-appointments - NEW FEATURE"""
+    def test_get_my_appointments_enhanced(self):
+        """Test GET /api/appointments/my-appointments - ENHANCED FEATURE with professional info"""
         if not self.client_token:
-            self.log_test("Get My Appointments", False, "No client token available")
+            self.log_test("Get My Appointments Enhanced", False, "No client token available")
             return False
             
         success, status, response = self.make_request('GET', 'appointments/my-appointments', token=self.client_token, expected_status=200)
         
         if success and isinstance(response, list):
-            # Check if appointments have calendar_info enrichment
+            # Check if appointments have both calendar_info and professional_info enrichment
             if len(response) > 0:
                 first_appointment = response[0]
-                if 'calendar_info' in first_appointment:
-                    self.log_test("Get My Appointments", True, "Appointments enriched with calendar info")
+                
+                # Check for calendar_info
+                has_calendar_info = 'calendar_info' in first_appointment
+                calendar_info_complete = False
+                if has_calendar_info:
+                    cal_info = first_appointment['calendar_info']
+                    calendar_info_complete = all(key in cal_info for key in ['business_name', 'calendar_name', 'url_slug'])
+                
+                # Check for professional_info (NEW ENHANCEMENT)
+                has_professional_info = 'professional_info' in first_appointment
+                professional_info_complete = False
+                if has_professional_info:
+                    prof_info = first_appointment['professional_info']
+                    professional_info_complete = all(key in prof_info for key in ['full_name', 'email'])
+                
+                if has_calendar_info and has_professional_info and calendar_info_complete and professional_info_complete:
+                    self.log_test("Get My Appointments Enhanced", True, "Appointments enriched with calendar_info AND professional_info")
+                    return True
+                elif has_calendar_info and calendar_info_complete:
+                    self.log_test("Get My Appointments Enhanced", False, "Missing professional_info enhancement")
+                    return False
                 else:
-                    self.log_test("Get My Appointments", True, "Basic appointments list returned")
+                    self.log_test("Get My Appointments Enhanced", False, "Missing calendar_info or professional_info")
+                    return False
             else:
-                self.log_test("Get My Appointments", True, "Empty appointments list returned")
+                self.log_test("Get My Appointments Enhanced", True, "Empty appointments list returned")
+                return True
+        else:
+            self.log_test("Get My Appointments Enhanced", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_get_my_appointments_structure(self):
+        """Test the exact structure of enhanced my-appointments response"""
+        if not self.client_token:
+            self.log_test("My Appointments Structure", False, "No client token available")
+            return False
+            
+        success, status, response = self.make_request('GET', 'appointments/my-appointments', token=self.client_token, expected_status=200)
+        
+        if success and isinstance(response, list):
+            if len(response) > 0:
+                appointment = response[0]
+                
+                # Check required fields
+                required_fields = ['id', 'calendar_id', 'client_id', 'appointment_date', 'appointment_time', 'status', 'notes']
+                missing_fields = [field for field in required_fields if field not in appointment]
+                
+                # Check calendar_info structure
+                calendar_info_valid = False
+                if 'calendar_info' in appointment:
+                    cal_info = appointment['calendar_info']
+                    expected_cal_fields = ['business_name', 'calendar_name', 'url_slug']
+                    calendar_info_valid = all(field in cal_info for field in expected_cal_fields)
+                
+                # Check professional_info structure (NEW)
+                professional_info_valid = False
+                if 'professional_info' in appointment:
+                    prof_info = appointment['professional_info']
+                    expected_prof_fields = ['full_name', 'email']
+                    professional_info_valid = all(field in prof_info for field in expected_prof_fields)
+                
+                if not missing_fields and calendar_info_valid and professional_info_valid:
+                    self.log_test("My Appointments Structure", True, "All required fields and enhancements present")
+                    return True
+                else:
+                    error_msg = f"Missing fields: {missing_fields}, calendar_info_valid: {calendar_info_valid}, professional_info_valid: {professional_info_valid}"
+                    self.log_test("My Appointments Structure", False, error_msg)
+                    return False
+            else:
+                self.log_test("My Appointments Structure", True, "Empty list - no appointments to check structure")
+                return True
+        else:
+            self.log_test("My Appointments Structure", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_my_appointments_authentication(self):
+        """Test that my-appointments requires authentication"""
+        success, status, response = self.make_request('GET', 'appointments/my-appointments', expected_status=401)
+        
+        if success:  # Should fail with 401
+            self.log_test("My Appointments Authentication", True, "Correctly requires authentication")
             return True
         else:
-            self.log_test("Get My Appointments", False, f"Status: {status}, Response: {response}")
+            self.log_test("My Appointments Authentication", False, f"Expected 401, got {status}: {response}")
             return False
+
+    def test_my_appointments_client_only(self):
+        """Test that only clients can access my-appointments"""
+        if not self.employer_token:
+            self.log_test("My Appointments Client Only", False, "No employer token available")
+            return False
+            
+        success, status, response = self.make_request('GET', 'appointments/my-appointments', token=self.employer_token, expected_status=403)
+        
+        if success:  # Should fail with 403
+            self.log_test("My Appointments Client Only", True, "Correctly blocked employers")
+            return True
+        else:
+            self.log_test("My Appointments Client Only", False, f"Expected 403, got {status}: {response}")
+            return False
+
+    def test_get_my_appointments(self):
+        """Test GET /api/appointments/my-appointments - Legacy test for compatibility"""
+        return self.test_get_my_appointments_enhanced()
 
     def test_delete_appointment(self):
         """Test DELETE /api/appointments/{id} - NEW FEATURE"""
