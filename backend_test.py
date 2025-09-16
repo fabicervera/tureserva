@@ -677,6 +677,10 @@ class TurnosProAPITester:
         print("🚀 Starting TurnosPro API Tests...")
         print("=" * 50)
         
+        # Test demo credentials first
+        demo_client_token, demo_professional_token = self.test_demo_credentials_login()
+        demo_calendar_id = self.test_demo_calendar_access()
+        
         # Location tests (NEW)
         print("\n🌍 Testing Location System...")
         self.test_get_locations()
@@ -711,6 +715,9 @@ class TurnosProAPITester:
         self.test_get_calendar_settings()
         self.test_get_available_slots()  # NEW: Tests priority logic
         
+        # NEW: Test available dates endpoint
+        self.test_get_available_dates()  # NEW FEATURE
+        
         # Friendship system tests (NEW)
         print("\n👥 Testing Friendship System...")
         self.test_request_friendship()  # NEW
@@ -720,6 +727,8 @@ class TurnosProAPITester:
         # Appointment tests
         print("\n🕐 Testing Appointments...")
         self.test_create_appointment_requires_friendship()  # NEW: Tests friendship requirement
+        self.test_get_my_appointments()  # NEW FEATURE
+        self.test_delete_appointment()  # NEW FEATURE
         self.test_get_appointments_employer()
         self.test_get_appointments_client()
         
