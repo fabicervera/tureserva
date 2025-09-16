@@ -609,7 +609,7 @@ const Dashboard = () => {
               {calendars.length === 0 ? (
                 <Card>
                   <CardContent className="p-12 text-center">
-                    <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <CalendarIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No tienes calendarios</h3>
                     <p className="text-gray-600 mb-6">Crea tu primer calendario para comenzar a recibir reservas</p>
                     <Button 
