@@ -14,6 +14,7 @@ class TurnosProAPITester:
         self.calendar_id = None
         self.calendar_slug = None
         self.friendship_id = None
+        self.appointment_id = None
         self.tests_run = 0
         self.tests_passed = 0
         self.errors = []
