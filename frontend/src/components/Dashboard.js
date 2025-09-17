@@ -152,8 +152,8 @@ const Dashboard = () => {
     }
   };
 
-  // Función para filtrar turnos
-  const filterAppointments = () => {
+  // useEffect para filtrar automáticamente cuando cambien los datos
+  useEffect(() => {
     let filtered = [...myAppointments];
     
     // Filtrar por fecha (solo futuros si showFutureOnly está activo)
@@ -189,11 +189,6 @@ const Dashboard = () => {
     });
     
     setFilteredAppointments(filtered);
-  };
-
-  // useEffect para filtrar automáticamente cuando cambien los datos
-  useEffect(() => {
-    filterAppointments();
   }, [myAppointments, appointmentSearch, showFutureOnly]);
 
   const loadLocations = async () => {
