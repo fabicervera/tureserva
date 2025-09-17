@@ -273,7 +273,7 @@ const RegisterForm = () => {
                   <Label className="text-sm font-medium text-gray-700">Tipo de cuenta</Label>
                   <RadioGroup
                     value={formData.user_type}
-                    onValueChange={(value) => setFormData({...formData, user_type: value})}
+                    onValueChange={(value) => setFormData(prev => ({...prev, user_type: value}))}
                     className="space-y-3"
                   >
                     <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
